@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  hand: MyText
+  turn_id: 1
+  user: one
+  game: one
+
+two:
+  hand: MyText
+  turn_id: 1
+  user: two
+  game: two
