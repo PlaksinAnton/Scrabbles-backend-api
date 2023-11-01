@@ -1,37 +1,42 @@
 class Api::V1::GamesController < ApplicationController
   def index
-    render json: {games: Game.all}, 
-      except: [:created_at, :updated_at],
-      include: {players: {only: [:id, :hand, :turn_id], methods: :nickname}},
-      status: 200
+    render_game(Game.all, true)
   end
 
   def show
     game = Game.find_by(id: params[:id])
-    binding.pry
-    if game
-      render json: {game: game},
-        except: [:created_at, :updated_at],
-        include: {players: {only: [:id, :hand, :turn_id], methods: :nickname}},
-        status: 200
-    else
-      render json: game_not_found
-    end
+    return game_not_found unless game
+
+    render_game(game)
   end 
 
   def create
     game = Game.create()
-    render json: game, status: 200
+
+    render_game(game)
   end
 
   def update
   end
 
   def destroy
+    game = Game.find_by(id: params[:id])
+    return game_not_found unless game
+    
+    game.destroy
+    render json: {ok: "Game deleted!"}, status: 200
   end
 
   private
   def game_not_found
-    { error: "Game not found!" }
+    render json: { error: "Game not found!" }
+  end
+
+  def render_game(game, plural = false)
+    sym = plural ? :games : :game
+    render json: {sym => game},
+      except: [:created_at, :updated_at],
+      include: {players: {only: [:hand, :turn_id], methods: [:user_id, :nickname]}},
+      status: 200
   end
 end

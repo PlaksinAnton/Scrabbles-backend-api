@@ -5,4 +5,8 @@ class Player < ApplicationRecord
   def nickname
     user.nickname
   end
+
+  def user_id
+    user.id
+  end
 end

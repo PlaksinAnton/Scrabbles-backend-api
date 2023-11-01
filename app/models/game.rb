@@ -1,7 +1,7 @@
 require 'net/http'
 
 class Game < ApplicationRecord
-  has_many :players
+  has_many :players, dependent: :delete_all
   include AASM
   RUS_LETTER_BAG = {
     а: 10, б:3, в:5, г:3, д:5, е:7, ё:2, ж:2, з:2, и:8, й:4, к:6, л:4, м:5, н:8,
@@ -17,17 +17,11 @@ class Game < ApplicationRecord
     state :retrying_turn
     state :game_ended
     
-    event :start do
-      before do
-        self.players.map{ |p| p.hand = take_latters_from_bag(HAND_SIZE) }
-      end
+    event :start, after: :fill_players_hands do
       transitions from: :in_lobby, to: :player_turn, if: :enough_players?
     end
 
-    event :next_turn do
-      after do
-        self.update(field: submited_data.dig(:field))
-      end
+    event :next_turn, after: :update_game do
       transitions from: [:retrying_turn, :player_turn], to: :player_turn, if: :valid_turn?
     end
 
@@ -40,18 +34,12 @@ class Game < ApplicationRecord
     end
   end
 
+  attr_accessor :submited_data # game_id field p_id hand_id
   
   def initialize(settings = {})
     empty_field = JSON(Array.new(15){Array.new(15)})
     new_letter_bag = JSON(RUS_LETTER_BAG)
     super(field: empty_field, letter_bag: new_letter_bag, current_turn: 0)
-  end
-
-  attr_reader :submited_data # game_id field p_id hand_id
-
-  def submited_data=(submited_data)
-    # @submited_data = JSON(submited_data, symbolize_names: true)
-    @submited_data = submited_data
   end
 
   
@@ -61,7 +49,7 @@ class Game < ApplicationRecord
   end
 
   def valid_turn?
-    matrix = JSON(@submited_data.dig(:field))
+    matrix = JSON(submited_data.dig(:field))
     graph = Graph.new
     words = []
   
@@ -139,8 +127,26 @@ class Game < ApplicationRecord
       chosen_letter
     end
 
-    self.letter_bag = JSON(letter_hash)
-    JSON(sample)
+    self.update(letter_bag: JSON(letter_hash))
+    sample
+  end
+
+  def fill_players_hands
+    self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
+  end
+
+  def update_game
+    refill_players_hand
+    self.update(field: submited_data.dig(:field), current_turn: current_turn + 1)
+  end
+
+  def refill_players_hand
+    current_turn_id = current_turn % self.players.size
+    submited_player = submited_data.dig(:players).find{|p| p[:turn_id] == current_turn_id}
+    submited_hand = JSON(submited_player[:hand])
+    shortfall = HAND_SIZE - submited_hand.size
+    refilled_hand = submited_hand.concat(take_latters_from_bag(shortfall))
+    self.players.find_by(turn_id: current_turn_id).update(hand: JSON(refilled_hand))
   end
 
   def valid_words?(words)
@@ -176,7 +182,4 @@ class Game < ApplicationRecord
 
     json_response.dig('query', 'pages').keys.first != '-1'
   end
-  # x = Array.new(15){Array.new(15)}
-  # x[7][7..10] = 'test'.split('')
-  # x[7..9].each_with_index{|str, i| str[8] = 'eat'[i]}
 end

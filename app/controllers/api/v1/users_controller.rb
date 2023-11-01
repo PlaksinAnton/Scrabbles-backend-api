@@ -29,10 +29,10 @@ class Api::V1::UsersController < ApplicationController
     return user_not_found unless user
 
     user.destroy
-    render json: { error: "User has been deleted!" }
+    render json: { ok: "User has been deleted!" }, status: 200
   end
 
-  def connect_to_game
+  def join_game
     game = Game.find_by(id: params[:game_id])
     return game_not_found unless game
 
@@ -41,8 +41,12 @@ class Api::V1::UsersController < ApplicationController
 
     return render json: { error: "Game has already started!" } unless game.in_lobby?
 
-    player = Player.create(game_id: game.id, user_id: user.id, turn_id: game.players.size)
-    render json: player, status: 200
+    player_count = game.players.size
+    return render json: { error: "Game is full!" } if player_count >= 4
+
+    player = Player.create(game_id: game.id, user_id: user.id, turn_id: player_count)
+
+    render_game(game)
   end
 
   def start_game
@@ -55,14 +59,11 @@ class Api::V1::UsersController < ApplicationController
     player = game.players.find{ |player| player.user_id == user.id }
     return player_not_found unless player
 
-    return render json: { error: "Specified user should have a first turn to start the game!" } unless player.turn_id == 0
+    return render json: { error: "Specified user must have a first turn to start the game!" } unless player.turn_id == 0
 
-    return render json: { error: 'Not enough players to start game!' } unless game.start!
+    return render json: { error: "Can't start the game" } unless game.start!
 
-    render json: {game: game},
-    except: [:created_at, :updated_at],
-    include: {players: {only: [:id, :hand, :turn_id], methods: :nickname}},
-    status: 200
+    render_game(game)
   end
 
   def submit_turn
@@ -75,14 +76,12 @@ class Api::V1::UsersController < ApplicationController
     player = game.players.find{ |player| player.user_id == user.id }
     return player_not_found unless player
 
-    return render json: { error: "It is other's player turn" } unless player.turn_id == game.current_turn
+    return render json: { error: "It is other player's turn" } unless player.turn_id == game.current_turn%game.players.size
 
     game.submited_data = params[:game]
     game.retry_turn! unless game.next_turn!
-    render json: {game: game},
-        except: [:created_at, :updated_at],
-        include: {players: {only: [:id, :hand, :turn_id], methods: :nickname}},
-        status: 200
+
+    render_game(game)
   end
 
   def leave_game
@@ -96,7 +95,7 @@ class Api::V1::UsersController < ApplicationController
     return player_not_found unless player
 
     player.destroy
-    render json: { error: "User left the game!" }
+    render json: { ok: "User left the game!" }, status: 200
   end
 
   private
@@ -125,5 +124,12 @@ class Api::V1::UsersController < ApplicationController
 
   def player_not_found
     render json: { error: "Specified user is not connected to the game!" }
+  end
+
+  def render_game(game)
+    render json: {game: game},
+      except: [:created_at, :updated_at],
+      include: {players: {only: [:hand, :turn_id], methods: [:user_id, :nickname]}},
+      status: 200
   end
 end

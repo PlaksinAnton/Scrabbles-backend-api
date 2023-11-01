@@ -1,24 +1,21 @@
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## How to get started in development mode:  
 
-Things you may want to cover:
+* **[Install Ruby (with rbenv)](https://github.com/rbenv/rbenv) Version 3.2.2**  
 
-* Ruby version
+* **Clone the repository**  
+	Choose the folder where you want the bot and use git clone to get this repository on your computer  
+	$```git clone https://github.com/PlaksinAnton/Scrubbles-backend-api.git```  
+	Get in it  
+	$```scrubbles-backend-api```  
 
-* System dependencies
+* **Install all ruby dependencies**  
+	$```bundle install```  
 
-* Configuration
+* **Database creation**  
+	$```rake db:migrate```  
 
-* Database creation
+* **To start server use**  
+	$```rails s```  
 
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
