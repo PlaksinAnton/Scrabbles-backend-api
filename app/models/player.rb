@@ -9,4 +9,8 @@ class Player < ApplicationRecord
   def user_id
     user.id
   end
+
+  def hand_array
+    JSON(self.hand)
+  end
 end

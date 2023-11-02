@@ -35,8 +35,8 @@ class Api::V1::GamesController < ApplicationController
   def render_game(game, plural = false)
     sym = plural ? :games : :game
     render json: {sym => game},
-      except: [:created_at, :updated_at],
-      include: {players: {only: [:hand, :turn_id], methods: [:user_id, :nickname]}},
+      except: [:created_at, :updated_at, :field, :letter_bag], methods: [:field_array, :bag_array],
+      include: {players: {only: [:turn_id], methods: [:user_id, :nickname, :hand_array]}},
       status: 200
   end
 end

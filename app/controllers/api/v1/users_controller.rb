@@ -1,19 +1,19 @@
 class Api::V1::UsersController < ApplicationController
   def index
-    render json: User.all, status: 200
+    render json: User.all, except: [:created_at, :updated_at], status: 200
   end
 
   def show
     user = User.find_by(id: params[:id])
     return user_not_found unless user
 
-    render json: user, status: 200
+    render json: user, except: [:created_at, :updated_at], status: 200
   end
 
   def create
     user = User.new(user_params)
     if user.save
-      render json: user, status: 200
+      render json: user, except: [:created_at, :updated_at], status: 200
     else
       render json: { error: "Creating Error!" }
       Rails.logger.error 'Failed to create User'
@@ -46,7 +46,7 @@ class Api::V1::UsersController < ApplicationController
 
     player = Player.create(game_id: game.id, user_id: user.id, turn_id: player_count)
 
-    render_game(game)
+    render_game(game.reload)
   end
 
   def start_game
@@ -63,7 +63,7 @@ class Api::V1::UsersController < ApplicationController
 
     return render json: { error: "Can't start the game" } unless game.start!
 
-    render_game(game)
+    render_game(game.reload)
   end
 
   def submit_turn
@@ -81,7 +81,7 @@ class Api::V1::UsersController < ApplicationController
     game.submited_data = params[:game]
     game.retry_turn! unless game.next_turn!
 
-    render_game(game)
+    render_game(game.reload)
   end
 
   def leave_game
@@ -128,8 +128,8 @@ class Api::V1::UsersController < ApplicationController
 
   def render_game(game)
     render json: {game: game},
-      except: [:created_at, :updated_at],
-      include: {players: {only: [:hand, :turn_id], methods: [:user_id, :nickname]}},
+      except: [:created_at, :updated_at, :field, :letter_bag], methods: [:field_array, :bag_array],
+      include: {players: {only: [:turn_id], methods: [:user_id, :nickname, :hand_array]}},
       status: 200
   end
 end

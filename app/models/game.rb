@@ -38,10 +38,19 @@ class Game < ApplicationRecord
   
   def initialize(settings = {})
     empty_field = JSON(Array.new(15){Array.new(15)})
-    new_letter_bag = JSON(RUS_LETTER_BAG)
-    super(field: empty_field, letter_bag: new_letter_bag, current_turn: 0)
+    letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
+      item[1].times { letter_array << item[0].to_s}
+    end
+    super(field: empty_field, letter_bag: JSON(letter_array), current_turn: 0)
   end
 
+  def field_array
+    JSON(self.field)
+  end
+
+  def bag_array
+    JSON(self.letter_bag)
+  end
   
   private
   def enough_players?
@@ -118,16 +127,18 @@ class Game < ApplicationRecord
   end
 
   def take_latters_from_bag(n)
-    letter_hash = JSON(self.letter_bag)
+    letter_array = JSON(self.letter_bag)
+    arr_length = letter_array.length
+    sample = []
 
-    sample = (1..n).map do |_i|
-      chosen_letter = letter_hash.keys.sample
-      letter_hash[chosen_letter] -= 1
-      letter_hash.delete(chosen_letter) if letter_hash[chosen_letter] == 0
-      chosen_letter
+    n.times do 
+      id = rand(arr_length)
+      sample << letter_array[id]
+      letter_array.delete_at(id)
+      arr_length -= 1
     end
 
-    self.update(letter_bag: JSON(letter_hash))
+    self.update(letter_bag: JSON(letter_array))
     sample
   end
 
