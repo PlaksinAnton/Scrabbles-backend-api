@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "~> 3.2.1"
+ruby "~> 3.2.0"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 7.0.8"
@@ -53,3 +53,9 @@ end
 gem "aasm"
 gem "aasm-diagram", require: false, group: :development
 gem "after_commit_everywhere"
+
+# JSON Web Token auth
+gem "jwt"
+
+# creates config/application.yaml for tokens
+gem "figaro"

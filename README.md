@@ -16,6 +16,11 @@
 * **Database creation**  
 	$```rake db:migrate```  
 
+* **Configuration:**  
+	$```bundle exec figaro install``` - creates config/application.yaml file (also adds it to .gitignore)  
+	Now make up secret for jwt  
+	$```echo "HMAC_SECRET: $YOUR_SECRET" >> config/application.yml```  
+
 * **To start server use**  
 	$```rails s```  
 
