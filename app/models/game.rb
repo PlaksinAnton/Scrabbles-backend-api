@@ -37,7 +37,7 @@ class Game < ApplicationRecord
   attr_accessor :submited_data # game_id field p_id hand_id
   
   def initialize(settings = {})
-    empty_field = JSON(Array.new(15){Array.new(15)})
+    empty_field = JSON(Array.new(15){Array.new(15){''}})
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
     end
@@ -58,13 +58,13 @@ class Game < ApplicationRecord
   end
 
   def valid_turn?
-    matrix = JSON(submited_data.dig(:field))
+    matrix = submited_data[:field_array]
     graph = Graph.new
     words = []
   
     matrix.each_with_index do |string, i|
       string.each_with_index do |letter, j|
-        next if letter.nil?
+        next if letter.empty?
   
         current = 15 * i + j
         right = current + 1
@@ -111,19 +111,19 @@ class Game < ApplicationRecord
   end
   
   def left_letter_exists?(matrix, i, j)
-    j > 0 && matrix[i][j-1]
+    j > 0 && matrix[i][j-1].present?
   end
   
   def right_letter_exists?(matrix, i, j)
-    j < 14 && matrix[i][j+1]
+    j < 14 && matrix[i][j+1].present?
   end
   
   def top_letter_exists?(matrix, i, j)
-    i > 0 && matrix[i-1][j]
+    i > 0 && matrix[i-1][j].present?
   end 
   
   def bottom_letter_exists?(matrix, i, j)
-    i < 14 && matrix[i+1][j]
+    i < 14 && matrix[i+1][j].present?
   end
 
   def take_latters_from_bag(n)
@@ -148,15 +148,14 @@ class Game < ApplicationRecord
 
   def update_game
     refill_players_hand
-    self.update(field: submited_data.dig(:field), current_turn: current_turn + 1)
+    self.update(field: JSON(submited_data[:field_array]), current_turn: current_turn + 1)
   end
 
   def refill_players_hand
     current_turn_id = current_turn % self.players.size
     submited_player = submited_data.dig(:players).find{|p| p[:turn_id] == current_turn_id}
-    submited_hand = JSON(submited_player[:hand])
-    shortfall = HAND_SIZE - submited_hand.size
-    refilled_hand = submited_hand.concat(take_latters_from_bag(shortfall))
+    shortfall = HAND_SIZE - submited_player[:hand_array].size
+    refilled_hand = submited_player[:hand_array].concat(take_latters_from_bag(shortfall))
     self.players.find_by(turn_id: current_turn_id).update(hand: JSON(refilled_hand))
   end
 

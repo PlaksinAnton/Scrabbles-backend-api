@@ -1,13 +1,13 @@
 Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
-      resources :users, only: [:index, :show, :create, :update, :destroy]
-      put 'users/:user_id/join_game/:game_id', to: 'users#join_game'
-      put 'users/:user_id/leave_game/:game_id', to: 'users#leave_game'
-      put 'users/:user_id/start_game/:game_id', to: 'users#start_game'
-      put 'users/:user_id/submit_turn/:game_id', to: 'users#submit_turn'      
-      
-      resources :games, only: [:index, :show, :create, :update, :destroy]
+      resources :games, only: [:index, :show, :update, :destroy]
+      post 'new_game', to: 'games#create' # {"nickname": "Boba"}
+      post 'join_game/:game_id', to: 'games#join_game' # {"nickname": "Biba"}
+      post 'start_game/:game_id/:player_id', to: 'games#start_game'
+      post 'submit_turn/:game_id/:player_id', to: 'games#submit_turn'   
+      post 'leave_game/:game_id/:player_id', to: 'games#leave_game'
+   
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
