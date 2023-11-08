@@ -1,9 +1,13 @@
-class Api::V1::GamesController < ApplicationController
+class Api::V1::GamesController < Api::V1::ApplicationController
+  include Authentication
+  before_action :authorize_request, except: [:index, :show, :create, :join_game]
+
   def index
     render_game(Game.all, true)
   end
 
   def show
+    binding.pry
     game = Game.find_by(id: params[:id])
     return game_not_found unless game
 
@@ -14,6 +18,7 @@ class Api::V1::GamesController < ApplicationController
     game = Game.create()
 
     player = Player.create(game_id: game.id, nickname: params[:nickname], turn_id: 0)
+    set_token(player.id, player.nickname)
 
     render_game(game)
   end
@@ -30,6 +35,7 @@ class Api::V1::GamesController < ApplicationController
     return render json: { error: "Game is full!" } if player_count >= 4
 
     player = Player.create(game_id: game.id, nickname: params[:nickname], turn_id: player_count)
+    set_token(player.id, player.nickname)
 
     render_game(game.reload)
   end
@@ -38,10 +44,7 @@ class Api::V1::GamesController < ApplicationController
     game = Game.find_by(id: params[:game_id])
     return game_not_found unless game
 
-    player = game.players.find_by(id: params[:player_id]) ##
-    return player_not_found unless player
-
-    return render json: { error: "Specified player must have a first turn to start the game!" } unless player.turn_id == 0
+    return render json: { error: "Specified player must have a first turn to start the game!" } unless current_player.turn_id == 0
 
     return render json: { error: "Can't start the game" } unless game.start!
 
@@ -52,10 +55,7 @@ class Api::V1::GamesController < ApplicationController
     game = Game.find_by(id: params[:game_id])
     return game_not_found unless game
 
-    player = game.players.find_by(id: params[:player_id]) ##
-    return player_not_found unless player
-
-    return render json: { error: "It is other player's turn" } unless player.turn_id == game.current_turn%game.players.size
+    return render json: { error: "It is other player's turn" } unless current_player.turn_id == game.current_turn%game.players.size
 
     game.submited_data = params[:game]
     game.retry_turn! unless game.next_turn!
@@ -67,10 +67,7 @@ class Api::V1::GamesController < ApplicationController
     game = Game.find_by(id: params[:game_id])
     return game_not_found unless game
 
-    player = game.players.find_by(id: params[:player_id]) ##
-    return player_not_found unless player
-
-    player.destroy
+    current_player.destroy
     render json: { ok: "Player left the game!" }, status: 200
   end
 
@@ -85,10 +82,6 @@ class Api::V1::GamesController < ApplicationController
   private
   def game_not_found
     render json: { error: "Game not found!" }
-  end
-
-  def player_not_found
-    render json: { error: "Specified player is not connected to the game!" }
   end
 
   def render_game(game, plural = false)
