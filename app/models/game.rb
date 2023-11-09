@@ -14,28 +14,32 @@ class Game < ApplicationRecord
   # whiny_transitions: false
   aasm do 
     state :in_lobby, initial: true
-    state :player_turn
+    state :players_turn
     state :retrying_turn
     state :game_ended
+
+    event :add_player, after: :create_player do
+      transitions from: :in_lobby, to: :in_lobby, if: :enough_space?
+    end
     
     event :start, after: :fill_players_hands do
-      transitions from: :in_lobby, to: :player_turn, if: :enough_players?
+      transitions from: :in_lobby, to: :players_turn, if: [:enough_players?, :is_starting_player_first?]
     end
 
     event :next_turn, after: :update_game do
-      transitions from: [:retrying_turn, :player_turn], to: :player_turn, if: :valid_turn?
+      transitions from: [:retrying_turn, :players_turn], to: :players_turn, if: [:submitting_players_turn?, :valid_turn?]
     end
 
     event :retry_turn do
-      transitions from: [:retrying_turn, :player_turn], to: :retrying_turn
+      transitions from: [:retrying_turn, :players_turn], to: :retrying_turn
     end
 
     event :surrender do
-      transitions from: [:player_turn, :retrying_turn], to: :game_ended
+      transitions from: [:players_turn, :retrying_turn], to: :game_ended
     end
   end
 
-  attr_accessor :submited_data # game_id field p_id hand_id
+  attr_accessor :submitted_data
   
   def initialize(settings = {})
     empty_field = JSON(Array.new(15){Array.new(15){''}})
@@ -52,18 +56,32 @@ class Game < ApplicationRecord
   def bag_array
     JSON(self.letter_bag)
   end
-  
-  def aasm_event_failed(start, in_lobby)
-    # use custom exception/messages, report metrics, etc
-  end
 
   private
-  def enough_players?
-    self.players.size >= 2
+  def enough_space?(_nickname)
+    raise "Not enough space for another player!" if self.players.size >= 4
+    true
   end
 
-  def valid_turn?
-    matrix = submited_data[:field_array]
+  def enough_players?(_starting_player)
+    raise "Not enough players!" if self.players.size < 2
+    true
+  end
+
+  def is_starting_player_first?(starting_player)
+    return true unless starting_player
+
+    raise "Player must be the first in queue to start the game!" if starting_player.turn_id != 0
+    true
+  end
+
+  def submitting_players_turn?(submitting_player)
+    raise "It is the other player's turn!" if submitting_player.turn_id != self.current_turn % self.players.size
+    true
+  end
+
+  def valid_turn?(_submitting_player)
+    matrix = submitted_data[:field_array]
     graph = Graph.new
     words = []
   
@@ -89,8 +107,7 @@ class Game < ApplicationRecord
           words << new_word(bottom, matrix[i][j], :down) unless top_letter_exists?(matrix, i, j)
   
         elsif not graph.has_node?(current)
-          Rails.logger.info "Fast adjacency check failed"
-          return false
+          raise "Not all letters are connected!"
         end
   
         words.find_all{|word| word[:nid] == current}.each do |word|
@@ -101,14 +118,10 @@ class Game < ApplicationRecord
     end
   
     if graph.size != graph.dfs(112).size
-      Rails.logger.info "Adjacency check failed"
-      return false
+      raise "Not all words are connected!"
     end
 
-    return false unless valid_words?(words.map { |hash| hash[:w] })
-
-    Rails.logger.info "Valid turn"
-    true
+    valid_words?(words.map { |hash| hash[:w] })
   end
   
   def new_word(next_id, first_letter, direction)
@@ -131,6 +144,18 @@ class Game < ApplicationRecord
     i < 14 && matrix[i+1][j].present?
   end
 
+  def valid_words?(words)
+    dic = File.read('lib/russian_nouns.txt')
+    words.each do |word|
+      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
+        raise "Words verification failed: couldn't find the word '#{word}'"
+      end
+    end
+    true
+    # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
+    # return false
+  end
+
   def take_latters_from_bag(n)
     letter_array = JSON(self.letter_bag)
     arr_length = letter_array.length
@@ -147,34 +172,27 @@ class Game < ApplicationRecord
     sample
   end
 
-  def fill_players_hands
+  def fill_players_hands(_starting_player)
     self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
   end
 
-  def update_game
+  def update_game(_submitting_player)
     refill_players_hand
-    self.update(field: JSON(submited_data[:field_array]), current_turn: current_turn + 1)
+    self.update(field: JSON(submitted_data[:field_array]), current_turn: current_turn + 1)
   end
 
   def refill_players_hand
     current_turn_id = current_turn % self.players.size
-    submited_player = submited_data.dig(:players).find{|p| p[:turn_id] == current_turn_id}
+    submited_player = submitted_data.dig(:players).find{|p| p[:turn_id] == current_turn_id}
     shortfall = HAND_SIZE - submited_player[:hand_array].size
     refilled_hand = submited_player[:hand_array].concat(take_latters_from_bag(shortfall))
     self.players.find_by(turn_id: current_turn_id).update(hand: JSON(refilled_hand))
   end
 
-  def valid_words?(words)
-    dic = File.read('lib/russian_nouns.txt')
-    words.each do |word|
-      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
-        Rails.logger.info "Words check failed: couldn't find the word '#{word}'"
-        return false
-      end
-    end
-    true
-    # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
-    # return false
+  def create_player(nickname)
+    raise "Empty nickname!" if nickname.blank?
+    
+    Player.create(game_id: self.id, nickname: nickname, turn_id: self.players.size)
   end
 
   def word_exists_in_wiki?(word)

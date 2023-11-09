@@ -5,8 +5,8 @@ module Authentication
   private
   attr_accessor :payload
 
-  def set_token(player)
-    new_payload = { sub: player.id, game: player.game.id, exp: 24.hours.from_now.to_i }
+  def set_token(player_id, game_id)
+    new_payload = { sub: player_id, game: game_id, exp: 24.hours.from_now.to_i }
     token = JWT.encode new_payload, SECRET_KEY, ENCRIPTION_METHOD, header_fields={ typ: 'JWT' }
     response.set_header('Token', token)
     Rails.logger.info "Token is set in the 'Token' header"

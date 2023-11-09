@@ -14,7 +14,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     game = Game.create()
 
     player = Player.create(game_id: game.id, nickname: params[:nickname], turn_id: 0)
-    set_token(player)
+    set_token(player.id, game.id)
 
     render_game(game.reload)
   end
@@ -23,34 +23,40 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     game = Game.find_by(id: params[:game_id])
     return game_not_found unless game
 
-    return render json: { error: "Game has already started!" } unless game.in_lobby?
+    begin
+      game.add_player!(params[:nickname])
+    rescue Exception => e
+      return render json: { error: e.message }
+    end
+    
+    game.reload
+    player_id = game.players.find_by(nickname: params[:nickname]).id
+    set_token(player_id, game.id)
 
-    player_count = game.players.size
-    return render json: { error: "Game is full!" } if player_count >= 4
+    render_game(game)
+  end
 
-    player = Player.create(game_id: game.id, nickname: params[:nickname], turn_id: player_count)
-    set_token(player)
+  def start_game
+    begin
+      game.start!(current_player)
+    rescue Exception => e
+      return render json: { error: e.message }
+    end
 
     render_game(game.reload)
   end
 
-  def start_game
-    return render json: { error: "Specified player must have a first turn to start the game!" } unless current_player.turn_id == 0
-
-    return render json: { error: "Can't start the game" } unless current_game.start!
-    
-    render_game(current_game.reload)
-  end
-
   def submit_turn
-    unless current_player.turn_id == current_game.current_turn % current_game.players.size
-      return render json: { error: "It is other player's turn" }
+    game.submited_data = params[:game]
+
+    begin
+      game.next_turn!(current_player)
+    rescue Exception => e
+      game.retry_turn!
+      return render json: { error: e.message }
     end
 
-    current_game.submited_data = params[:game]
-    current_game.retry_turn! unless current_game.next_turn!
-
-    render_game(current_game.reload)
+    render_game(game.reload)
   end
 
   def leave_game
@@ -59,7 +65,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def destroy    
-    current_game.destroy
+    game.destroy
     render json: { success: "Game deleted!" }, status: 200
   end
 
