@@ -11,7 +11,8 @@ class Game < ApplicationRecord
   HAND_SIZE = 7
   WIKI_URL = 'https://ru.wiktionary.org/w/api.php?action=query&format=json&titles=%s'
 
-  aasm whiny_transitions: false do 
+  # whiny_transitions: false
+  aasm do 
     state :in_lobby, initial: true
     state :player_turn
     state :retrying_turn
@@ -52,6 +53,10 @@ class Game < ApplicationRecord
     JSON(self.letter_bag)
   end
   
+  def aasm_event_failed(start, in_lobby)
+    # use custom exception/messages, report metrics, etc
+  end
+
   private
   def enough_players?
     self.players.size >= 2
