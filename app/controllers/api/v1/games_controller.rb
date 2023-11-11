@@ -47,7 +47,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def submit_turn
-    game.submited_data = params[:game]
+    game.submitted_data = params[:game]
 
     begin
       game.next_turn!(current_player)
