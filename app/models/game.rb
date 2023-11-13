@@ -2,6 +2,7 @@ require 'net/http'
 
 class Game < ApplicationRecord
   has_many :players, dependent: :delete_all
+  before_create :randomize_id
   include AASM
   RUS_LETTER_BAG = {
     а: 10, б:3, в:5, г:3, д:5, е:7, ё:2, ж:2, з:2, и:8, й:4, к:6, л:4, м:5, н:8,
@@ -162,7 +163,7 @@ class Game < ApplicationRecord
     sample = []
 
     n.times do 
-      id = rand(arr_length)
+      id = SecureRandom.random_number(arr_length)
       sample << letter_array[id]
       letter_array.delete_at(id)
       arr_length -= 1
@@ -193,6 +194,12 @@ class Game < ApplicationRecord
     raise "Empty nickname!" if nickname.blank?
     
     Player.create(game_id: self.id, nickname: nickname, turn_id: self.players.size)
+  end
+
+  def randomize_id
+    begin
+      self.id = SecureRandom.random_number(1_000_000_000)
+    end while Game.exists?(id: self.id)
   end
 
   def word_exists_in_wiki?(word)
