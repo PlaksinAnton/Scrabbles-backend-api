@@ -16,47 +16,47 @@ class Game < ApplicationRecord
   aasm do 
     state :in_lobby, initial: true
     state :players_turn
-    state :retrying_turn
     state :game_ended
 
-    event :add_player, after: :create_player do
-      transitions from: :in_lobby, to: :in_lobby, if: :enough_space?
+    event :add_player, if: :enough_space? do
+      transitions from: :in_lobby, to: :in_lobby, after: :create_player
     end
     
-    event :start, after: :fill_players_hands do
-      transitions from: :in_lobby, to: :players_turn, if: [:enough_players?, :is_starting_player_first?]
+    event :start, if: [:submitting_players_turn?, :enough_players?] do
+      transitions from: :in_lobby, to: :players_turn, after: :fill_hands
     end
 
-    event :next_turn, after: :update_game do
-      transitions from: [:retrying_turn, :players_turn], to: :players_turn, if: [:submitting_players_turn?, :valid_turn?]
+    event :next_turn, if: [:submitting_players_turn?, :valid_turn?] do
+      transitions from: :players_turn, to: :players_turn, after: :update_game
     end
 
-    event :retry_turn do
-      transitions from: [:retrying_turn, :players_turn], to: :retrying_turn
+    event :exchange, if: :submitting_players_turn? do
+      transitions from: :players_turn, to: :players_turn, after: :exchange_letters
     end
 
-    event :surrender do
-      transitions from: [:players_turn, :retrying_turn], to: :game_ended
+    event :surrender, if: :submitting_players_turn? do
+      transitions from: :players_turn, to: :game_ended
     end
   end
 
   attr_accessor :submitted_data
   
   def initialize(settings = {})
-    empty_field = JSON(Array.new(15){Array.new(15){''}})
+    empty_field = Array.new(15){Array.new(15){''}}
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
     end
-    super(field: empty_field, letter_bag: JSON(letter_array), current_turn: 0)
+    super(field: JSON(empty_field), letter_bag: JSON(letter_array), current_turn: 0)
   end
 
-  def field_array
-    JSON(self.field)
+  def field
+    JSON(super)
   end
 
-  def bag_array
-    JSON(self.letter_bag)
+  def letter_bag
+    JSON(super)
   end
+
 
   private
   def enough_space?(_nickname)
@@ -64,27 +64,22 @@ class Game < ApplicationRecord
     true
   end
 
-  def enough_players?(_starting_player)
+  def enough_players?(_current_player)
     raise "Not enough players!" if self.players.size < 2
     true
   end
 
-  def is_starting_player_first?(starting_player)
-    return true unless starting_player
-
-    raise "Player must be the first in queue to start the game!" if starting_player.turn_id != 0
+  def submitting_players_turn?(current_player)
+    raise "It is the other player's turn!" if current_player.turn_id != self.current_turn % self.players.size
     true
   end
 
-  def submitting_players_turn?(submitting_player)
-    raise "It is the other player's turn!" if submitting_player.turn_id != self.current_turn % self.players.size
-    true
-  end
-
-  def valid_turn?(_submitting_player)
-    matrix = submitted_data[:field_array]
+  def valid_turn?(_current_player)
+    matrix = submitted_data[:field]
     graph = Graph.new
     words = []
+
+    raise "At least one word must go throught central cell!" if matrix[7][7].blank?
   
     matrix.each_with_index do |string, i|
       string.each_with_index do |letter, j|
@@ -158,36 +153,47 @@ class Game < ApplicationRecord
   end
 
   def take_latters_from_bag(n)
-    letter_array = JSON(self.letter_bag)
-    arr_length = letter_array.length
+    bag = self.letter_bag
+    bag_size = bag.length
     sample = []
 
     n.times do 
-      id = SecureRandom.random_number(arr_length)
-      sample << letter_array[id]
-      letter_array.delete_at(id)
-      arr_length -= 1
+      id = SecureRandom.random_number(bag_size)
+      sample << bag[id]
+      bag.delete_at(id)
+      bag_size -= 1
     end
 
-    self.update(letter_bag: JSON(letter_array))
+    self.update(letter_bag: JSON(bag))
     sample
   end
 
-  def fill_players_hands(_starting_player)
+  def fill_hands(_current_player)
     self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
   end
 
-  def update_game(_submitting_player)
-    refill_players_hand
-    self.update(field: JSON(submitted_data[:field_array]), current_turn: current_turn + 1)
+  def update_game(current_player)
+    refill_hand(current_player)
+    self.update(field: JSON(submitted_data[:field]), current_turn: current_turn + 1)
   end
 
-  def refill_players_hand
-    current_turn_id = current_turn % self.players.size
-    submited_player = submitted_data.dig(:players).find{|p| p[:turn_id] == current_turn_id}
-    shortfall = HAND_SIZE - submited_player[:hand_array].size
-    refilled_hand = submited_player[:hand_array].concat(take_latters_from_bag(shortfall))
-    self.players.find_by(turn_id: current_turn_id).update(hand: JSON(refilled_hand))
+  def refill_hand(current_player)
+    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
+    shortfall = HAND_SIZE - submitted_player[:hand].size
+
+    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
+    current_player.update(hand: JSON(refilled_hand))
+  end
+
+  def exchange_letters(current_player)
+    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
+    shortfall = HAND_SIZE - submitted_player[:hand].size
+
+    refilled_letter_bag = self.letter_bag << (current_player.hand - submitted_player[:hand])
+    self.update(letter_bag: JSON(refilled_letter_bag))
+
+    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
+    current_player.update(hand: JSON(refilled_hand))
   end
 
   def create_player(nickname)

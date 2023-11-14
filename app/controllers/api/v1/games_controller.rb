@@ -25,7 +25,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     begin
       game.add_player!(params[:nickname])
-    rescue Exception => e
+    rescue RuntimeError => e
       return render json: { error: e.message }
     end
     
@@ -39,20 +39,31 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   def start_game
     begin
       game.start!(current_player)
-    rescue Exception => e
+    rescue RuntimeError => e
       return render json: { error: e.message }
     end
 
     render_game(game.reload)
   end
 
-  def submit_turn
+  def submitt_turn
     game.submitted_data = params[:game]
 
     begin
       game.next_turn!(current_player)
-    rescue Exception => e
-      game.retry_turn!
+    rescue RuntimeError => e
+      return render json: { error: e.message }
+    end
+
+    render_game(game.reload)
+  end
+
+  def exchange
+    game.submitted_data = params[:game]
+
+    begin
+      game.exchange!(current_player)
+    rescue RuntimeError => e
       return render json: { error: e.message }
     end
 
@@ -65,7 +76,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def destroy    
-    game.destroy
+    game.destroy!(current_player)
     render json: { success: "Game deleted!" }, status: 200
   end
 
@@ -73,8 +84,8 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   def render_game(game, plural = false)
     sym = plural ? :games : :game
     render json: {sym => game},
-      except: [:created_at, :updated_at, :field, :letter_bag], methods: [:field_array, :bag_array],
-      include: {players: {only: [:id, :nickname, :turn_id], methods: [:hand_array]}},
+      except: [:created_at, :updated_at],
+      include: {players: {except: [:created_at, :updated_at]}},
       status: 200
   end
 
