@@ -5,7 +5,7 @@ Rails.application.routes.draw do
       post 'new_game', to: 'games#new_game' # {"nickname": "Boba"}
       post 'join_game/:game_id', to: 'games#join_game' # {"nickname": "Biba"}
       post 'start_game', to: 'games#start_game'
-      post 'submitt_turn', to: 'games#submitt_turn'
+      post 'submit_turn', to: 'games#submit_turn'
       post 'exchange', to: 'games#exchange'
       post 'leave_game', to: 'games#leave_game'
     end

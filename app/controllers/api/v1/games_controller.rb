@@ -46,7 +46,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     render_game(game.reload)
   end
 
-  def submitt_turn
+  def submit_turn
     game.submitted_data = params[:game]
 
     begin
