@@ -12,13 +12,12 @@ class Game < ApplicationRecord
   HAND_SIZE = 7
   WIKI_URL = 'https://ru.wiktionary.org/w/api.php?action=query&format=json&titles=%s'
 
-  # whiny_transitions: false
   aasm do 
     state :in_lobby, initial: true
     state :players_turn
     state :game_ended
 
-    event :add_player, if: :enough_space? do
+    event :add_player, if: [:enough_space?, :valid_nickname?] do
       transitions from: :in_lobby, to: :in_lobby, after: :create_player
     end
     
@@ -39,14 +38,14 @@ class Game < ApplicationRecord
     end
   end
 
-  attr_accessor :submitted_data
+  attr_accessor :submitted_data, :created_player_id
   
-  def initialize(settings = {})
+  def initialize(nickname, settings = {})
     empty_field = Array.new(15){Array.new(15){''}}
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
     end
-    super(field: JSON(empty_field), letter_bag: JSON(letter_array), current_turn: 0)
+    super(field: JSON(empty_field), letter_bag: JSON(letter_array), current_turn: 1, players_turn: 0)
   end
 
   def field
@@ -59,26 +58,67 @@ class Game < ApplicationRecord
 
 
   private
-  def enough_space?(_nickname)
-    raise "Not enough space for another player!" if self.players.size >= 4
-    true
+  def create_player(nickname)
+    p = self.players.create(game_id: self.id, nickname: nickname, active_player: true)
+    self.created_player_id = p.id
   end
 
-  def enough_players?(_current_player)
-    raise "Not enough players!" if self.players.size < 2
-    true
+  def fill_hands(_current_player)
+    self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
   end
 
-  def submitting_players_turn?(current_player)
-    raise "It is the other player's turn!" if current_player.turn_id != self.current_turn % self.players.size
-    true
+  def update_game(current_player)
+    refill_hand(current_player)
+    self.update(field: JSON(submitted_data[:field]), current_turn: current_turn + 1, players_turn: next_players_turn)
   end
 
-  def valid_turn?(_current_player)
+  def refill_hand(current_player)
+    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
+    shortfall = HAND_SIZE - submitted_player[:hand].size
+
+    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
+    current_player.update(hand: JSON(refilled_hand))
+  end
+
+  def exchange_letters(current_player)
+    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
+    shortfall = HAND_SIZE - submitted_player[:hand].size
+
+    refilled_letter_bag = self.letter_bag << (current_player.hand - submitted_player[:hand])
+    self.update(letter_bag: JSON(refilled_letter_bag), current_turn: current_turn + 1, players_turn: next_players_turn)
+
+    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
+    current_player.update(hand: JSON(refilled_hand))
+  end
+
+  def next_players_turn
+    next_players_turn = self.players_turn
+    begin
+      next_players_turn = (next_players_turn + 1) % self.players.size
+    end while self.players[next_players_turn].active_player == false
+    next_players_turn
+  end
+
+  def take_latters_from_bag(n)
+    bag = self.letter_bag
+    bag_size = bag.length
+    sample = []
+
+    n.times do 
+      id = SecureRandom.random_number(bag_size)
+      sample << bag[id]
+      bag.delete_at(id)
+      bag_size -= 1
+    end
+
+    self.update(letter_bag: JSON(bag))
+    sample
+  end
+
+  def valid_turn?
     matrix = submitted_data[:field]
     graph = Graph.new
     words = []
-
     raise "At least one word must go throught central cell!" if matrix[7][7].blank?
   
     matrix.each_with_index do |string, i|
@@ -119,6 +159,26 @@ class Game < ApplicationRecord
 
     valid_words?(words.map { |hash| hash[:w] })
   end
+
+  def enough_space?
+    raise "Not enough space for another player!" if self.players.size >= 4
+    true
+  end
+
+  def valid_nickname?(nickname)
+    raise "Empty nickname!" if nickname.blank?
+    true
+  end
+
+  def enough_players?
+    raise "Not enough players!" if self.players.size < 2
+    true
+  end
+
+  def submitting_players_turn?(current_player)
+    raise "It is the other player's turn!" unless self.players[self.players_turn] == current_player
+    true
+  end
   
   def new_word(next_id, first_letter, direction)
     { nid: next_id, w: first_letter.to_s, dir: direction }
@@ -134,7 +194,7 @@ class Game < ApplicationRecord
   
   def top_letter_exists?(matrix, i, j)
     i > 0 && matrix[i-1][j].present?
-  end 
+  end
   
   def bottom_letter_exists?(matrix, i, j)
     i < 14 && matrix[i+1][j].present?
@@ -150,56 +210,6 @@ class Game < ApplicationRecord
     true
     # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
     # return false
-  end
-
-  def take_latters_from_bag(n)
-    bag = self.letter_bag
-    bag_size = bag.length
-    sample = []
-
-    n.times do 
-      id = SecureRandom.random_number(bag_size)
-      sample << bag[id]
-      bag.delete_at(id)
-      bag_size -= 1
-    end
-
-    self.update(letter_bag: JSON(bag))
-    sample
-  end
-
-  def fill_hands(_current_player)
-    self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
-  end
-
-  def update_game(current_player)
-    refill_hand(current_player)
-    self.update(field: JSON(submitted_data[:field]), current_turn: current_turn + 1)
-  end
-
-  def refill_hand(current_player)
-    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
-    shortfall = HAND_SIZE - submitted_player[:hand].size
-
-    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
-    current_player.update(hand: JSON(refilled_hand))
-  end
-
-  def exchange_letters(current_player)
-    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
-    shortfall = HAND_SIZE - submitted_player[:hand].size
-
-    refilled_letter_bag = self.letter_bag << (current_player.hand - submitted_player[:hand])
-    self.update(letter_bag: JSON(refilled_letter_bag))
-
-    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
-    current_player.update(hand: JSON(refilled_hand))
-  end
-
-  def create_player(nickname)
-    raise "Empty nickname!" if nickname.blank?
-    
-    Player.create(game_id: self.id, nickname: nickname, turn_id: self.players.size)
   end
 
   def randomize_id

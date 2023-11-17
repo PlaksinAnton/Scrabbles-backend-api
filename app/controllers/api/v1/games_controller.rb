@@ -3,7 +3,6 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   include Validation
   before_action :authorize_request, except: [:index, :new_game, :join_game]
   before_action :validate_payload, except: [:index, :new_game, :join_game]
-  before_action :validate_nickname, only: [:new_game, :join_game]
 
   def index
     render_game(Game.all, true)
@@ -11,12 +10,11 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   #############
   def new_game
-    game = Game.create()
+    game = Game.create
+    game.add_player!(params[:nickname])
 
-    player = Player.create(game_id: game.id, nickname: params[:nickname], turn_id: 0)
-    set_token(player.id, game.id)
-
-    render_game(game.reload)
+    set_token(game.created_player_id, game.id)
+    render_game(game)
   end
 
   def join_game
@@ -29,10 +27,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       return render json: { error: e.message }
     end
     
-    game.reload
-    player_id = game.players.find_by(nickname: params[:nickname]).id
-    set_token(player_id, game.id)
-
+    set_token(game.created_player_id, game.id)
     render_game(game)
   end
 
@@ -43,7 +38,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       return render json: { error: e.message }
     end
 
-    render_game(game.reload)
+    render_game(game)
   end
 
   def submit_turn
@@ -85,11 +80,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     sym = plural ? :games : :game
     render json: {sym => game},
       except: [:created_at, :updated_at],
-      include: {players: {except: [:created_at, :updated_at]}},
+      include: {players: {except: [:game_id, :created_at, :updated_at]}},
       status: 200
-  end
-
-  def validate_nickname
-    render json: { error: "Empty nickname!" } if params[:nickname].blank?
   end
 end
