@@ -42,7 +42,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def submit_turn
-    game.submitted_data = params[:game]
+    game.submitted_data = params
 
     begin
       game.next_turn!(current_player)
@@ -50,11 +50,11 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       return render json: { error: e.message }
     end
 
-    render_game(game.reload)
+    render_game(game)
   end
 
   def exchange
-    game.submitted_data = params[:game]
+    game.submitted_data = params
 
     begin
       game.exchange!(current_player)
@@ -62,11 +62,11 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       return render json: { error: e.message }
     end
 
-    render_game(game.reload)
+    render_game(game)
   end
 
   def leave_game
-    current_player.destroy
+    current_player.update(active_player: false)
     render json: { success: "Player left the game!" }, status: 200
   end
 
@@ -79,7 +79,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   def render_game(game, plural = false)
     sym = plural ? :games : :game
     render json: {sym => game},
-      except: [:created_at, :updated_at],
+      except: [:created_at, :updated_at, :words],
       include: {players: {except: [:game_id, :created_at, :updated_at]}},
       status: 200
   end

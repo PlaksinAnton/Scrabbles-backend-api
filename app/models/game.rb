@@ -1,16 +1,53 @@
-require 'net/http'
+require_relative '../../lib/array_sample'
 
 class Game < ApplicationRecord
   has_many :players, dependent: :delete_all
-  before_create :randomize_id
+  before_create :randomize_id, :set_defaults
+
   include AASM
   RUS_LETTER_BAG = {
-    а: 10, б:3, в:5, г:3, д:5, е:7, ё:2, ж:2, з:2, и:8, й:4, к:6, л:4, м:5, н:8,
+    а: 10, б:3, в:5, г:3, д:5, е:9, ж:2, з:2, и:8, й:4, к:6, л:4, м:5, н:8,
     о:10, п:6, р:6, с:6, т:5, у:3, ф:1, х:2, ц:1, ч:2, ш:1, щ:1, ъ:1, ы:2, ь:2,
     э:1, ю:1, я:3, any:3
   }.freeze
-  HAND_SIZE = 7
-  WIKI_URL = 'https://ru.wiktionary.org/w/api.php?action=query&format=json&titles=%s'
+  RUS_LETTERS_WEIGHTS = {
+    а: 1, б:3, в:2, г:3, д:2, е:1, ж:5, з:5, и:1, й:2, к:2, л:2, м:2, н:1,
+    о:1, п:2, р:2, с:2, т:2, у:3, ф:10, х:5, ц:10, ч:5, ш:10, щ:10, ъ:10, ы:5, ь:5,
+    э:10, ю:10, я:3
+  }.freeze
+  LETTER_BONUS = [1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
+                  1,1,1,1,1,3,1,1,1,3,1,1,1,1,1,
+                  1,1,1,1,1,1,2,1,2,1,1,1,1,1,1,
+                  2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,
+                  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                  1,3,1,1,1,3,1,1,1,3,1,1,1,3,1,
+                  1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,
+                  1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
+                  1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,
+                  1,3,1,1,1,3,1,1,1,3,1,1,1,3,1,
+                  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                  2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,
+                  1,1,1,1,1,1,2,1,2,1,1,1,1,1,1,
+                  1,1,1,1,1,3,1,1,1,3,1,1,1,1,1,
+                  1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
+                ].freeze
+  WORD_BONUS = [3,1,1,1,1,1,1,3,1,1,1,1,1,1,3,
+                1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,
+                1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,
+                1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
+                1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                3,1,1,1,1,1,1,1,1,1,1,1,1,1,3,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,
+                1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
+                1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,
+                1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,
+                3,1,1,1,1,1,1,3,1,1,1,1,1,1,3,
+              ].freeze
+  HAND_SIZE = 7.freeze
 
   aasm do 
     state :in_lobby, initial: true
@@ -20,13 +57,13 @@ class Game < ApplicationRecord
     event :add_player, if: [:enough_space?, :valid_nickname?] do
       transitions from: :in_lobby, to: :in_lobby, after: :create_player
     end
-    
+
     event :start, if: [:submitting_players_turn?, :enough_players?] do
       transitions from: :in_lobby, to: :players_turn, after: :fill_hands
     end
 
     event :next_turn, if: [:submitting_players_turn?, :valid_turn?] do
-      transitions from: :players_turn, to: :players_turn, after: :update_game
+      transitions from: :players_turn, to: :players_turn, after: :process_turn
     end
 
     event :exchange, if: :submitting_players_turn? do
@@ -39,56 +76,72 @@ class Game < ApplicationRecord
   end
 
   attr_accessor :submitted_data, :created_player_id
-  
-  def initialize(nickname, settings = {})
-    empty_field = Array.new(15){Array.new(15){''}}
+
+  def set_defaults
+    self.field = JSON(Array.new(225){''})
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
     end
-    super(field: JSON(empty_field), letter_bag: JSON(letter_array), current_turn: 1, players_turn: 0)
+    self.letter_bag = JSON(letter_array)
+    self.current_turn = 1
+    self.players_turn = 0
+    self.words = JSON('[]')
   end
 
   def field
     JSON(super)
   end
-
   def letter_bag
     JSON(super)
   end
-
+  def words
+    JSON(super)
+  end
 
   private
   def create_player(nickname)
-    p = self.players.create(game_id: self.id, nickname: nickname, active_player: true)
+    p = self.players.create(game_id: self.id, nickname: nickname)
     self.created_player_id = p.id
   end
 
-  def fill_hands(_current_player)
-    self.players.map{ |p| p.update(hand: JSON(take_latters_from_bag(HAND_SIZE))) }
+  def fill_hands
+    new_letter_bag = letter_bag
+    
+    self.players.map{ |p| p.update(hand: JSON(new_letter_bag.sample!(HAND_SIZE))) }
+
+    self.update(letter_bag: JSON(new_letter_bag))
   end
 
-  def update_game(current_player)
-    refill_hand(current_player)
-    self.update(field: JSON(submitted_data[:field]), current_turn: current_turn + 1, players_turn: next_players_turn)
+  def process_turn
+    shortfall = submitted_data[:letters].size
+    new_letter_bag = self.letter_bag
+    refilled_hand = submitted_data[:hand].concat(new_letter_bag.sample!(shortfall))
+
+    player = self.players[players_turn]
+    player.update(
+      hand: JSON(refilled_hand), 
+      score: player.score + count_score(@new_field, @new_words),
+    )
+    self.update(
+      field: JSON(@new_field),
+      letter_bag: JSON(new_letter_bag), 
+      current_turn: current_turn + 1, 
+      players_turn: next_players_turn, 
+      words: JSON(@new_words),
+    )
   end
 
-  def refill_hand(current_player)
-    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
-    shortfall = HAND_SIZE - submitted_player[:hand].size
+  def exchange_letters
+    shortfall = submitted_data[:letters].size
+    new_letter_bag = self.letter_bag.concat(submitted_data[:letters])
+    refilled_hand = submitted_data[:hand].concat(new_letter_bag.sample!(shortfall))
 
-    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
-    current_player.update(hand: JSON(refilled_hand))
-  end
-
-  def exchange_letters(current_player)
-    submitted_player = submitted_data.dig(:players).find{|p| p[:id] == current_player.id}
-    shortfall = HAND_SIZE - submitted_player[:hand].size
-
-    refilled_letter_bag = self.letter_bag << (current_player.hand - submitted_player[:hand])
-    self.update(letter_bag: JSON(refilled_letter_bag), current_turn: current_turn + 1, players_turn: next_players_turn)
-
-    refilled_hand = submitted_player[:hand].concat(take_latters_from_bag(shortfall))
-    current_player.update(hand: JSON(refilled_hand))
+    self.players[players_turn].update(hand: JSON(refilled_hand))
+    self.update(
+      letter_bag: JSON(new_letter_bag),
+      current_turn: current_turn + 1, 
+      players_turn: next_players_turn
+    )
   end
 
   def next_players_turn
@@ -99,65 +152,81 @@ class Game < ApplicationRecord
     next_players_turn
   end
 
-  def take_latters_from_bag(n)
-    bag = self.letter_bag
-    bag_size = bag.length
-    sample = []
+  def valid_turn?
+    @new_field = self.field
+    submitted_data[:positions].each_with_index{|position, id| @new_field[position] = submitted_data[:letters][id] }
 
-    n.times do 
-      id = SecureRandom.random_number(bag_size)
-      sample << bag[id]
-      bag.delete_at(id)
-      bag_size -= 1
-    end
-
-    self.update(letter_bag: JSON(bag))
-    sample
+    words_from_field = parse_field(@new_field)
+    valid_spelling?(words_from_field.map { |word| word[:spelling] })
+    @new_words = words_from_field.map { |word| word[:positions] }
+    true
   end
 
-  def valid_turn?
-    matrix = submitted_data[:field]
+  def parse_field(new_field)
     graph = Graph.new
     words = []
-    raise "At least one word must go throught central cell!" if matrix[7][7].blank?
+    raise "At least one word must go throught central cell!" if new_field[112].blank?
   
-    matrix.each_with_index do |string, i|
-      string.each_with_index do |letter, j|
-        next if letter.empty?
-  
-        current = 15 * i + j
-        right = current + 1
-        bottom = current + 15
-  
-        if right_letter_exists?(matrix, i, j)
-          graph.add_edge(current, right)
-          words << new_word(right, matrix[i][j], :right) unless left_letter_exists?(matrix, i, j)
-  
-          if bottom_letter_exists?(matrix, i, j)
-            graph.add_edge(current, bottom)
-            words << new_word(bottom, matrix[i][j], :down) unless top_letter_exists?(matrix, i, j)
-          end
-  
-        elsif bottom_letter_exists?(matrix, i, j)
-          graph.add_edge(current, bottom)
-          words << new_word(bottom, matrix[i][j], :down) unless top_letter_exists?(matrix, i, j)
-  
-        elsif not graph.has_node?(current)
-          raise "Not all letters are connected!"
-        end
-  
-        words.find_all{|word| word[:nid] == current}.each do |word|
-          word[:dir] == :right ? word[:nid] += 1 : word[:nid] += 15
-          word[:w] += matrix[i][j]
-        end
-      end
-    end
-  
-    if graph.size != graph.dfs(112).size
-      raise "Not all words are connected!"
-    end
+    new_field.each_with_index do |letter, current|
+      next if letter.empty?
 
-    valid_words?(words.map { |hash| hash[:w] })
+      right = current + 1
+      bottom = current + 15
+
+      if right_letter_exists?(new_field, current)
+        graph.add_edge(current, right)
+        words << new_word(current, right, new_field[current], :right) unless left_letter_exists?(new_field, current)
+
+        if bottom_letter_exists?(new_field, current)
+          graph.add_edge(current, bottom)
+          words << new_word(current, bottom, new_field[current], :down) unless top_letter_exists?(new_field, current)
+        end
+
+      elsif bottom_letter_exists?(new_field, current)
+        graph.add_edge(current, bottom)
+        words << new_word(current, bottom, new_field[current], :down) unless top_letter_exists?(new_field, current)
+
+      elsif not graph.has_node?(current)
+        raise "Not all letters are connected!"
+      end
+      add_current_letter_to_words(words, letter, current)
+    end
+    raise "Not all words are connected!" if graph.size != graph.dfs(112).size
+
+    words
+  end
+
+  def new_word(current_id, next_id, first_letter, direction)
+    { nid: next_id, spelling: first_letter.to_s, positions: [current_id], dir: direction }
+  end
+
+  def add_current_letter_to_words(words, letter, current_id)
+    words.find_all{|chosen_word| chosen_word[:nid] == current_id}.each do |word|
+      word[:positions] << word[:nid]
+      word[:dir] == :right ? word[:nid] += 1 : word[:nid] += 15
+      word[:spelling] += letter
+    end
+  end
+
+  def count_score(new_field, words_positions)
+    new_words_positions = words_positions - self.words
+    score = 0
+
+    new_words_positions.each do |word_positions|
+      word_score = 0
+      word_multiplier = 1
+
+      word_positions.each do |letter_position|
+        letter_weight = RUS_LETTERS_WEIGHTS[new_field[letter_position].to_sym]
+        if submitted_data[:positions].delete(letter_position)
+          letter_weight *= LETTER_BONUS[letter_position]
+          word_multiplier *= WORD_BONUS[letter_position]
+        end
+        word_score += letter_weight
+      end
+      score += word_score * word_multiplier
+    end
+    score
   end
 
   def enough_space?
@@ -176,31 +245,27 @@ class Game < ApplicationRecord
   end
 
   def submitting_players_turn?(current_player)
-    raise "It is the other player's turn!" unless self.players[self.players_turn] == current_player
+    raise "It is the other player's turn!" unless self.players[players_turn].id == current_player.id
     true
   end
   
-  def new_word(next_id, first_letter, direction)
-    { nid: next_id, w: first_letter.to_s, dir: direction }
+  def left_letter_exists?(field, i)
+    i % 15 != 0 && field[i-1].present?
   end
   
-  def left_letter_exists?(matrix, i, j)
-    j > 0 && matrix[i][j-1].present?
+  def right_letter_exists?(field, i)
+    (i + 1) % 15 != 0 && field[i+1].present?
   end
   
-  def right_letter_exists?(matrix, i, j)
-    j < 14 && matrix[i][j+1].present?
+  def top_letter_exists?(field, i)
+    i > 14 && field[i-15].present?
   end
   
-  def top_letter_exists?(matrix, i, j)
-    i > 0 && matrix[i-1][j].present?
-  end
-  
-  def bottom_letter_exists?(matrix, i, j)
-    i < 14 && matrix[i+1][j].present?
+  def bottom_letter_exists?(field, i)
+    i < 210 && field[i+15].present?
   end
 
-  def valid_words?(words)
+  def valid_spelling?(words)
     dic = File.read('lib/russian_nouns.txt')
     words.each do |word|
       unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
@@ -216,26 +281,5 @@ class Game < ApplicationRecord
     begin
       self.id = SecureRandom.random_number(1_000_000_000)
     end while Game.exists?(id: self.id)
-  end
-
-  def word_exists_in_wiki?(word)
-    word = URI.encode_www_form_component word
-  	begin
-    	response = Net::HTTP.get_response(URI(WIKI_URL%word.force_encoding("ascii"))) 
-  	rescue => e
-      Rails.logger.fatal e
-      return false
-  	end
-
-    json_response = {}
-  	case response
-  	when Net::HTTPSuccess then
-  	  json_response = JSON(response.body)
-  	else
-      Rails.logger.error "Couldn't get proper response from wiki about word '#{word}'"
-      return false
-  	end
-
-    json_response.dig('query', 'pages').keys.first != '-1'
   end
 end

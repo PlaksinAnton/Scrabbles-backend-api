@@ -1,5 +1,11 @@
 class Player < ApplicationRecord
   belongs_to :game
+  before_create :set_defaults
+  
+  def set_defaults
+    self.active_player = true
+    self.score = 0
+  end
 
   def hand
     JSON(super)

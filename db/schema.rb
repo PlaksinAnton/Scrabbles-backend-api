@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_17_113214) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_18_103007) do
   create_table "games", force: :cascade do |t|
     t.text "field"
     t.text "letter_bag"
@@ -19,6 +19,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_17_113214) do
     t.datetime "updated_at", null: false
     t.string "aasm_state"
     t.integer "players_turn", null: false
+    t.string "words"
   end
 
   create_table "players", force: :cascade do |t|
@@ -28,6 +29,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_17_113214) do
     t.datetime "updated_at", null: false
     t.string "nickname", null: false
     t.boolean "active_player", null: false
+    t.integer "score"
     t.index ["game_id"], name: "index_players_on_game_id"
   end
 
