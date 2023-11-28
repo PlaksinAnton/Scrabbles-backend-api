@@ -49,7 +49,7 @@ class Game < ApplicationRecord
               ].freeze
   HAND_SIZE = 7.freeze
 
-  aasm do 
+  aasm column: :game_state do 
     state :in_lobby, initial: true
     state :players_turn
     state :game_ended
@@ -78,14 +78,14 @@ class Game < ApplicationRecord
   attr_accessor :submitted_data, :created_player_id
 
   def set_defaults
+    self.current_turn = 0
+    self.players_turn = 0
+    self.words = JSON('[]')
     self.field = JSON(Array.new(225){''})
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
     end
     self.letter_bag = JSON(letter_array)
-    self.current_turn = 1
-    self.players_turn = 0
-    self.words = JSON('[]')
   end
 
   def field
@@ -100,7 +100,7 @@ class Game < ApplicationRecord
 
   private
   def create_player(nickname)
-    p = self.players.create(game_id: self.id, nickname: nickname)
+    p = self.players.create(nickname: nickname, game_id: self.id)
     self.created_player_id = p.id
   end
 
@@ -109,7 +109,7 @@ class Game < ApplicationRecord
     
     self.players.map{ |p| p.update(hand: JSON(new_letter_bag.sample!(HAND_SIZE))) }
 
-    self.update(letter_bag: JSON(new_letter_bag))
+    self.update(letter_bag: JSON(new_letter_bag), current_turn: 1)
   end
 
   def process_turn

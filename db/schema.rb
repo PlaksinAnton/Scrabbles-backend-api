@@ -10,26 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_18_103007) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_28_161458) do
   create_table "games", force: :cascade do |t|
-    t.text "field"
-    t.text "letter_bag"
-    t.integer "current_turn"
+    t.integer "current_turn", null: false
+    t.integer "players_turn", null: false
+    t.string "game_state", null: false
+    t.string "words", null: false
+    t.string "field", null: false
+    t.string "letter_bag", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "aasm_state"
-    t.integer "players_turn", null: false
-    t.string "words"
   end
 
   create_table "players", force: :cascade do |t|
-    t.text "hand"
+    t.string "nickname", null: false
+    t.integer "score", null: false
+    t.boolean "active_player", null: false
+    t.string "hand", null: false
     t.integer "game_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "nickname", null: false
-    t.boolean "active_player", null: false
-    t.integer "score"
     t.index ["game_id"], name: "index_players_on_game_id"
   end
 

@@ -5,6 +5,7 @@ class Player < ApplicationRecord
   def set_defaults
     self.active_player = true
     self.score = 0
+    self.hand = '[]'
   end
 
   def hand
