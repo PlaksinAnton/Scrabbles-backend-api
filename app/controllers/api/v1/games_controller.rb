@@ -1,14 +1,18 @@
 class Api::V1::GamesController < Api::V1::ApplicationController
   include Authentication
   include Validation
-  before_action :authorize_request, except: [:index, :new_game, :join_game]
-  before_action :validate_payload, except: [:index, :new_game, :join_game]
+  before_action :authorize_request, except: [:index, :new_game, :join_game, :delete]
+  before_action :validate_payload, except: [:index, :new_game, :join_game, :delete]
 
   def index
     render_game(Game.all, true)
   end
 
   #############
+  def show
+    render_game(game)
+  end
+
   def new_game
     game = Game.create
     game.add_player!(params[:nickname])
@@ -50,6 +54,8 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       return render json: { error: e.message }
     end
 
+    game.end_game! if game.game_has_a_winner? && game.all_players_are_done? 
+    
     render_game(game)
   end
 
@@ -67,12 +73,23 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   def leave_game
     current_player.update(active_player: false)
+    
+    game.reload
+    if game.no_active_players?
+      game.end_game!
+      return render_game(game)
+    end
+
     render json: { success: "Player left the game!" }, status: 200
   end
 
-  def destroy    
-    game.destroy!(current_player)
-    render json: { success: "Game deleted!" }, status: 200
+  def delete
+    # game.destroy!(current_player)
+    if Game.destroy_by(id: params[:id])
+      render json: { success: "Game deleted!" }, status: 200
+    else
+      render json: { error: "Something has gone wrong!" }, status: 400
+    end
   end
 
   private

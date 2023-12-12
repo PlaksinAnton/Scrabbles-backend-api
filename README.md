@@ -1,5 +1,7 @@
 # README
 
+## Read full API documentation on http://localhost:3000/api-docs/index.html after server up and running.
+
 ## How to get started in development mode:  
 
 * **[Install Ruby (with rbenv)](https://github.com/rbenv/rbenv) Version 3.2.2**  
@@ -19,7 +21,7 @@
 * **Start server**  
 	$```rails s```  
 
-## API endpoints:  
+<!-- ## API endpoints:  
 * **post 'api/v1/new_game'**  
 	Awaits JSON payload with player's nickname: {"nickname": "Biba"}  
 	Creates a new game and adds a player to it.  
@@ -47,4 +49,4 @@
 * **post 'api/v1/leave_game'**  
 	Awaits token from player in header 'Authorization'.  
 	Makes player inactive.  
-	Returns JSON info about the game. 
+	Returns JSON info about the game.  -->

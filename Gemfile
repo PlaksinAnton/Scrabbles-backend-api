@@ -39,6 +39,8 @@ gem "rack-cors", "~> 2.0"
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
+  gem "rspec-rails"   # Note that we also need rspec-rails
+  gem "rswag-specs"
 end
 
 group :development do
@@ -54,3 +56,10 @@ gem "after_commit_everywhere", "~> 1.3.1"
 
 # JSON Web Token auth
 gem "jwt", "~> 2.7.1"
+
+# Open API
+gem "rswag-api"
+gem "rswag-ui"
+
+# Bot for testing
+gem "factory_bot_rails"

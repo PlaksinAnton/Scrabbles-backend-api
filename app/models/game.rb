@@ -70,7 +70,11 @@ class Game < ApplicationRecord
       transitions from: :players_turn, to: :players_turn, after: :exchange_letters
     end
 
-    event :surrender, if: :submitting_players_turn? do
+    event :end_game do
+      transitions from: :players_turn, to: :game_ended
+    end
+
+    event :surrender, if: :submitting_players_turn? do ##
       transitions from: :players_turn, to: :game_ended
     end
   end
@@ -80,7 +84,9 @@ class Game < ApplicationRecord
   def set_defaults
     self.current_turn = 0
     self.players_turn = 0
-    self.words = JSON('[]')
+    self.winnig_score = 250 ##
+    self.winners = '[]'
+    self.words = '[]'
     self.field = JSON(Array.new(225){''})
     letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s}
@@ -96,6 +102,22 @@ class Game < ApplicationRecord
   end
   def words
     JSON(super)
+  end
+  def winners
+    JSON(super)
+  end
+
+  def game_has_a_winner?
+    self.winners.present?
+  end
+
+  def all_players_are_done?
+    self.current_player == 0
+  end
+
+  def no_active_players?
+    self.players.each{|p| return false if p.active_player}
+    true
   end
 
   private
@@ -118,15 +140,22 @@ class Game < ApplicationRecord
     refilled_hand = submitted_data[:hand].concat(new_letter_bag.sample!(shortfall))
 
     player = self.players[players_turn]
+    new_score = player.score + count_score(@new_field, @new_words)
+
     player.update(
-      hand: JSON(refilled_hand), 
-      score: player.score + count_score(@new_field, @new_words),
+      hand: JSON(refilled_hand),
+      score: new_score,
     )
+
+    winners = self.winners
+    winners << self.players_turn if new_score >= self.winnig_score
+
     self.update(
       field: JSON(@new_field),
       letter_bag: JSON(new_letter_bag), 
       current_turn: current_turn + 1, 
-      players_turn: next_players_turn, 
+      players_turn: next_players_turn,
+      winners: JSON(winners),
       words: JSON(@new_words),
     )
   end

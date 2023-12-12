@@ -1,0 +1,305 @@
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: '1'
+components:
+  schemas:
+    Game:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 982478387
+        current_turn:
+          type: integer
+          example: 0
+        players_turn:
+          type: integer
+          example: 1
+        game_state:
+          type: string
+          example: in_lobby
+        winning_score:
+          type: integer
+          example: 250
+        winners:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        field:
+          type: array
+          items:
+            type: string
+        letter_array:
+          type: array
+          items:
+            type: string
+        players:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Player"
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        nickname:
+          type: string
+          example: Biba
+        score:
+          type: integer
+          example: 0
+        active_player:
+          type: boolean
+          example: true
+        hand:
+          type: array
+          items:
+            type: string
+            example: ''
+  securitySchemes:
+    JWT:
+      name: Authorization
+      in: header
+paths:
+  "/api/v1/new_game":
+    post:
+      summary: Creates a new game and adds a player to it.
+      tags:
+      - Gameplay
+      parameters: []
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nicknme:
+                  type: string
+                  example: Biba
+              required:
+              - nicknme
+  "/api/v1/join_game/{game_id}":
+    parameters:
+    - name: game_id
+      in: path
+      description: Game id
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Connects player to the game.
+      tags:
+      - Gameplay
+      parameters: []
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nicknme:
+                  type: string
+                  example: Biba
+              required:
+              - nicknme
+  "/api/v1/start_game":
+    post:
+      summary: Fills all player's hands and starts the game if the player goes first.
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+  "/api/v1/submit_turn":
+    post:
+      summary: Validates turn, updates field, refills player's hand and count player's
+        score.
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                positions:
+                  type: array
+                  items:
+                    type: integer
+                  example:
+                  - 112
+                  - 113
+                  - 114
+                letters:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - с
+                  - о
+                  - н
+                hand:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - з
+                  - й
+                  - ь
+                  - щ
+              required:
+              - positions
+              - letters
+              - hand
+  "/api/v1/exchange":
+    post:
+      summary: Returns deleted letters from hand to letter bag and drags new ones.
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+  "/api/v1/leave_game":
+    post:
+      summary: Makes player inactive.
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+  "/api/v1/games":
+    get:
+      summary: List of all games in the system.
+      tags:
+      - Usefull
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  games:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Game"
+  "/api/v1/show":
+    get:
+      summary: Show game by token
+      tags:
+      - Usefull
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+  "/api/v1/delete/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Game id
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Delete game.
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  success:
+                    type: string
+servers:
+- url: http://localhost:3000
