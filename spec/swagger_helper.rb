@@ -30,7 +30,7 @@ RSpec.configure do |config|
               players_turn: { type: :integer, example: 1 },
               game_state: { type: :string, example: "in_lobby" },
               winning_score: { type: :integer, example: 250 },
-              winners: { type: :array, items: { type: :array, items: { type: :string }}},
+              winners: { type: :array, items: { type: :integer }},
               field: { type: :array, items: { type: :string }},
               letter_array: { type: :array, items: { type: :string }},
               players: {

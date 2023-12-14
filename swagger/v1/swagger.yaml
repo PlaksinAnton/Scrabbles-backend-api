@@ -26,9 +26,7 @@ components:
         winners:
           type: array
           items:
-            type: array
-            items:
-              type: string
+            type: integer
         field:
           type: array
           items:
@@ -75,6 +73,10 @@ paths:
       responses:
         '200':
           description: successful
+          headers:
+            Token:
+              type: string
+              description: Player's personal token
           content:
             application/json:
               schema:
@@ -87,11 +89,11 @@ paths:
             schema:
               type: object
               properties:
-                nicknme:
+                nickname:
                   type: string
                   example: Biba
               required:
-              - nicknme
+              - nickname
   "/api/v1/join_game/{game_id}":
     parameters:
     - name: game_id
@@ -108,6 +110,10 @@ paths:
       responses:
         '200':
           description: successful
+          headers:
+            Token:
+              type: string
+              description: Player's personal token
           content:
             application/json:
               schema:
@@ -120,11 +126,11 @@ paths:
             schema:
               type: object
               properties:
-                nicknme:
+                nickname:
                   type: string
                   example: Biba
               required:
-              - nicknme
+              - nickname
   "/api/v1/start_game":
     post:
       summary: Fills all player's hands and starts the game if the player goes first.

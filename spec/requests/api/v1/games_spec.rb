@@ -2,7 +2,7 @@ require 'swagger_helper'
 
 RSpec.describe 'api/v1/games', type: :request do
 
-  let!(:first_game) { first_game = create(:game); first_game.add_player!('kek'); first_game }
+  let!(:first_game) { first_game = create(:game); first_game.add_player!('Biba'); first_game }
   let!(:Authorization) { new_payload = { sub: first_game.players.first.id,
                                         game: first_game.id, 
                                         exp: 24.hours.from_now.to_i,
@@ -12,6 +12,7 @@ RSpec.describe 'api/v1/games', type: :request do
                                     'HS256',
                                     header_fields={ typ: 'JWT' }
                       }
+
   path '/api/v1/new_game' do
     post('Creates a new game and adds a player to it.') do
       tags 'Gameplay'
@@ -20,15 +21,16 @@ RSpec.describe 'api/v1/games', type: :request do
       parameter name: :payload, in: :body, schema: {
         type: :object,
         properties: {
-          nicknme: { type: :string, example: 'Biba' },
+          nickname: { type: :string, example: 'Biba' },
         },
-        required: [ 'nicknme' ]
+        required: [ 'nickname' ]
       }
 
       response(200, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
+        header :Token, type: :string, description: 'Player\'s personal token'
         let(:payload) { {nickname: 'Biba'} }
         run_test!
       end
@@ -44,15 +46,16 @@ RSpec.describe 'api/v1/games', type: :request do
       parameter name: :payload, in: :body, schema: {
         type: :object,
         properties: {
-          nicknme: { type: :string, example: 'Biba' },
+          nickname: { type: :string, example: 'Biba' },
         },
-        required: [ 'nicknme' ]
+        required: [ 'nickname' ]
       }
 
       response(200, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
+        header :Token, type: :string, description: 'Player\'s personal token'
         let(:game_id) { first_game.id }
         let(:payload) { {nickname: 'Boba'} }
         run_test!
@@ -72,6 +75,10 @@ RSpec.describe 'api/v1/games', type: :request do
           game: { '$ref' => '#/components/schemas/Game' }
         }
         run_test!
+        # run_test! do |response|
+        #   data = JSON.parse(response.body)
+        #   expect(data['error']).to eq('Not enough players!')
+        # end
       end
     end
   end
