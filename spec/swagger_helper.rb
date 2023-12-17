@@ -33,6 +33,8 @@ RSpec.configure do |config|
               winners: { type: :array, items: { type: :integer }},
               field: { type: :array, items: { type: :string }},
               letter_array: { type: :array, items: { type: :string }},
+              language: { type: :string },
+              hand_size: { type: :integer },
               players: {
                 type: :array,
                 items: { '$ref': '#/components/schemas/Player' }

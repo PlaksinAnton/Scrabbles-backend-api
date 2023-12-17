@@ -37,7 +37,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   def start_game
     begin
-      game.start!(current_player)
+      game.start!(current_player, params)
     rescue RuntimeError => e
       return render json: { error: e.message }
     end

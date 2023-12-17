@@ -35,6 +35,10 @@ components:
           type: array
           items:
             type: string
+        language:
+          type: string
+        hand_size:
+          type: integer
         players:
           type: array
           items:
@@ -133,7 +137,7 @@ paths:
               - nickname
   "/api/v1/start_game":
     post:
-      summary: Fills all player's hands and starts the game if the player goes first.
+      summary: Fills all player's hands and starts the game with chosen settings.
       tags:
       - Gameplay
       security:
@@ -152,6 +156,22 @@ paths:
                 properties:
                   game:
                     "$ref": "#/components/schemas/Game"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                language:
+                  type: string
+                  example: rus
+                  description: Only russian for now.
+                hand_size:
+                  type: integer
+                  example: '8'
+                  description: Default for russian is 7.
+              required:
+              - language
   "/api/v1/submit_turn":
     post:
       summary: Validates turn, updates field, refills player's hand and count player's

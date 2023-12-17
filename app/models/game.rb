@@ -5,49 +5,7 @@ class Game < ApplicationRecord
   before_create :randomize_id, :set_defaults
 
   include AASM
-  RUS_LETTER_BAG = {
-    а: 10, б:3, в:5, г:3, д:5, е:9, ж:2, з:2, и:8, й:4, к:6, л:4, м:5, н:8,
-    о:10, п:6, р:6, с:6, т:5, у:3, ф:1, х:2, ц:1, ч:2, ш:1, щ:1, ъ:1, ы:2, ь:2,
-    э:1, ю:1, я:3, any:3
-  }.freeze
-  RUS_LETTERS_WEIGHTS = {
-    а: 1, б:3, в:2, г:3, д:2, е:1, ж:5, з:5, и:1, й:2, к:2, л:2, м:2, н:1,
-    о:1, п:2, р:2, с:2, т:2, у:3, ф:10, х:5, ц:10, ч:5, ш:10, щ:10, ъ:10, ы:5, ь:5,
-    э:10, ю:10, я:3
-  }.freeze
-  LETTER_BONUS = [1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
-                  1,1,1,1,1,3,1,1,1,3,1,1,1,1,1,
-                  1,1,1,1,1,1,2,1,2,1,1,1,1,1,1,
-                  2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,
-                  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                  1,3,1,1,1,3,1,1,1,3,1,1,1,3,1,
-                  1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,
-                  1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
-                  1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,
-                  1,3,1,1,1,3,1,1,1,3,1,1,1,3,1,
-                  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                  2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,
-                  1,1,1,1,1,1,2,1,2,1,1,1,1,1,1,
-                  1,1,1,1,1,3,1,1,1,3,1,1,1,1,1,
-                  1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
-                ].freeze
-  WORD_BONUS = [3,1,1,1,1,1,1,3,1,1,1,1,1,1,3,
-                1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,
-                1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,
-                1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
-                1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                3,1,1,1,1,1,1,1,1,1,1,1,1,1,3,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,
-                1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,
-                1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,
-                1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,
-                3,1,1,1,1,1,1,3,1,1,1,1,1,1,3,
-              ].freeze
-  HAND_SIZE = 7.freeze
+  SETTINGS = YAML.load_file("#{Rails.root}/config/game_settings.yml").freeze
 
   aasm column: :game_state do 
     state :in_lobby, initial: true
@@ -59,7 +17,7 @@ class Game < ApplicationRecord
     end
 
     event :start, if: [:submitting_players_turn?, :enough_players?] do
-      transitions from: :in_lobby, to: :players_turn, after: :fill_hands
+      transitions from: :in_lobby, to: :players_turn, after: [:set_configuration, :fill_hands]
     end
 
     event :next_turn, if: [:submitting_players_turn?, :valid_turn?] do
@@ -88,10 +46,6 @@ class Game < ApplicationRecord
     self.winners = '[]'
     self.words = '[]'
     self.field = JSON(Array.new(225){''})
-    letter_array = RUS_LETTER_BAG.each_with_object([]) do |item, letter_array|
-      item[1].times { letter_array << item[0].to_s}
-    end
-    self.letter_bag = JSON(letter_array)
   end
 
   def field
@@ -126,12 +80,31 @@ class Game < ApplicationRecord
     self.created_player_id = p.id
   end
 
-  def fill_hands
+  def fill_hands(_current_player, configuration_params)
     new_letter_bag = letter_bag
     
-    self.players.map{ |p| p.update(hand: JSON(new_letter_bag.sample!(HAND_SIZE))) }
+    self.players.map{ |p| p.update(hand: JSON(new_letter_bag.sample!(hand_size))) }
 
     self.update(letter_bag: JSON(new_letter_bag), current_turn: 1)
+  end
+
+  def set_configuration(_current_player, configuration_params)
+    lang = configuration_params[:language]
+    raise "Unknown language: #{lang}!" unless SETTINGS['language'].include?(lang)
+
+    hand_size = configuration_params[:hand_size] || SETTINGS.dig('language', lang, 'hand_size')
+    raise "Unsuitable hand size: #{configuration_params[:hand_size]}!" if hand_size < 3 || hand_size > 15
+    
+    letter_hash = SETTINGS.dig('language', lang, 'letter_bag')
+    letter_array = letter_hash.each_with_object([]) do |item, letter_array|
+      item[1].times { letter_array << item[0].to_s }
+    end
+
+    self.update(
+      letter_bag: JSON(letter_array),
+      language: lang,
+      hand_size: hand_size,
+    )
   end
 
   def process_turn
@@ -246,10 +219,11 @@ class Game < ApplicationRecord
       word_multiplier = 1
 
       word_positions.each do |letter_position|
-        letter_weight = RUS_LETTERS_WEIGHTS[new_field[letter_position].to_sym]
+        letter_weights = SETTINGS.dig('language', self.language, 'letter_weights')
+        letter_weight = letter_weights[new_field[letter_position]]
         if submitted_data[:positions].delete(letter_position)
-          letter_weight *= LETTER_BONUS[letter_position]
-          word_multiplier *= WORD_BONUS[letter_position]
+          letter_weight *= SETTINGS['letter_bonus'][letter_position]
+          word_multiplier *= SETTINGS['word_bonus'][letter_position]
         end
         word_score += letter_weight
       end

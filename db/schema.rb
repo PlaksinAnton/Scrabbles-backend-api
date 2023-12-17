@@ -10,15 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_05_102037) do
-  create_table "dummies", force: :cascade do |t|
-    t.string "name"
-    t.integer "age"
-    t.datetime "born_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
+ActiveRecord::Schema[7.0].define(version: 2023_11_28_161458) do
   create_table "games", force: :cascade do |t|
     t.integer "current_turn", null: false
     t.integer "players_turn", null: false
@@ -27,7 +19,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_05_102037) do
     t.string "winners", null: false
     t.string "words", null: false
     t.string "field", null: false
-    t.string "letter_bag", null: false
+    t.string "letter_bag"
+    t.string "language"
+    t.integer "hand_size"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

@@ -23,7 +23,7 @@ RSpec.describe 'api/v1/games', type: :request do
         properties: {
           nickname: { type: :string, example: 'Biba' },
         },
-        required: [ 'nickname' ]
+        required: [ :nickname ]
       }
 
       response(200, 'successful') do
@@ -48,7 +48,7 @@ RSpec.describe 'api/v1/games', type: :request do
         properties: {
           nickname: { type: :string, example: 'Biba' },
         },
-        required: [ 'nickname' ]
+        required: [ :nickname ]
       }
 
       response(200, 'successful') do
@@ -64,16 +64,26 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/start_game' do
-    post('Fills all player\'s hands and starts the game if the player goes first.') do
+    post('Fills all player\'s hands and starts the game with chosen settings.') do
       tags 'Gameplay'
+      consumes 'application/json'
       produces 'application/json'
       security [ JWT: {} ]
       parameter name: :Authorization, in: :header, type: :string
+      parameter name: :payload, in: :body, schema: {
+        type: :object,
+        properties: {
+          language: { type: :string, example: 'rus', description: 'Only russian for now.' },
+          hand_size: { type: :integer, example: '8', description: 'Default for russian is 7.' },
+        },
+        required: [ :language ]
+      }
 
       response(200, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
+        let(:payload) { { language: "rus", hand_size: 8 } }
         run_test!
         # run_test! do |response|
         #   data = JSON.parse(response.body)
@@ -97,14 +107,14 @@ RSpec.describe 'api/v1/games', type: :request do
           letters: { type: :array, items: { type: :string }, example: ['с', 'о', 'н'] },
           hand: { type: :array, items: { type: :string }, example: ['з', 'й', 'ь', 'щ'] }
         },
-        required: [ :positions,:letters, :hand ]
+        required: [ :positions, :letters, :hand ]
       }
 
       response(200, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
-        let(:payload) { {positions: [112,113,114], letters:['с', 'о', 'н'], hand: ['з', 'й', 'ь', 'щ']} }
+        let(:payload) { {positions: [112,113,114], letters:['с', 'о', 'н'], hand: ['з', 'й', 'ь', 'м']} }
         run_test!
       end
     end
