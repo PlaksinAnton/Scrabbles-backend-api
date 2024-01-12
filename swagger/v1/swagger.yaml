@@ -31,14 +31,20 @@ components:
           type: array
           items:
             type: string
-        letter_array:
-          type: array
-          items:
-            type: string
+        letter_bag:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
         language:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
         hand_size:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
         players:
           type: array
           items:
@@ -269,8 +275,9 @@ paths:
             application/json:
               schema:
                 properties:
-                  game:
-                    "$ref": "#/components/schemas/Game"
+                  success:
+                    type: string
+                    example: Player left the game!
   "/api/v1/games":
     get:
       summary: List of all games in the system.
@@ -308,24 +315,5 @@ paths:
                 properties:
                   game:
                     "$ref": "#/components/schemas/Game"
-  "/api/v1/delete/{id}":
-    parameters:
-    - name: id
-      in: path
-      description: Game id
-      required: true
-      schema:
-        type: string
-    delete:
-      summary: Delete game.
-      responses:
-        '200':
-          description: successful
-          content:
-            application/json:
-              schema:
-                properties:
-                  success:
-                    type: string
 servers:
 - url: http://localhost:3000

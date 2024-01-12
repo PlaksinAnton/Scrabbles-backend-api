@@ -1,13 +1,15 @@
 require 'swagger_helper'
+# require 'ruby-debug'
+# https://coderwall.com/p/bbxb8g/use-ruby-debugger-when-debugging-rspecs
 
 RSpec.describe 'api/v1/games', type: :request do
 
   let!(:first_game) { first_game = create(:game); first_game.add_player!('Biba'); first_game }
   let!(:Authorization) { new_payload = { sub: first_game.players.first.id,
-                                        game: first_game.id, 
+                                        game: first_game.id,
                                         exp: 24.hours.from_now.to_i,
                                       }
-                        JWT.encode new_payload, 
+                        JWT.encode new_payload,
                                     Rails.application.secrets.secret_key_base, 
                                     'HS256',
                                     header_fields={ typ: 'JWT' }
@@ -58,7 +60,9 @@ RSpec.describe 'api/v1/games', type: :request do
         header :Token, type: :string, description: 'Player\'s personal token'
         let(:game_id) { first_game.id }
         let(:payload) { {nickname: 'Boba'} }
-        run_test!
+        run_test! do |response|
+          debugger
+        end
       end
     end
   end
@@ -154,7 +158,7 @@ RSpec.describe 'api/v1/games', type: :request do
 
       response(200, 'successful') do
         schema properties: {
-          game: { '$ref' => '#/components/schemas/Game' }
+          success: { type: :string, example: "Player left the game!" }
         }
         run_test!
       end
@@ -192,21 +196,6 @@ RSpec.describe 'api/v1/games', type: :request do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
-        run_test!
-      end
-    end
-  end
-
-  path '/api/v1/delete/{id}' do
-    parameter name: :id, in: :path, type: :string, description: 'Game id'
-    delete('Delete game.') do
-      produces 'application/json'
-
-      response(200, 'successful') do
-        schema properties: {
-          success: { type: :string }
-        }
-        let(:id) { first_game.id }
         run_test!
       end
     end

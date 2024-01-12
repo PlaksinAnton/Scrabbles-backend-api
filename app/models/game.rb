@@ -29,7 +29,7 @@ class Game < ApplicationRecord
     end
 
     event :end_game do
-      transitions from: :players_turn, to: :game_ended
+      transitions from: :players_turn, to: :game_ended, after: :summarize_results
     end
 
     event :surrender, if: :submitting_players_turn? do ##
@@ -42,9 +42,10 @@ class Game < ApplicationRecord
   def set_defaults
     self.current_turn = 0
     self.players_turn = 0
-    self.winnig_score = 250 ##
+    self.winnig_score = 5 ##
     self.winners = '[]'
     self.words = '[]'
+    # self.letter_bag = nil
     self.field = JSON(Array.new(225){''})
   end
 
@@ -52,7 +53,8 @@ class Game < ApplicationRecord
     JSON(super)
   end
   def letter_bag
-    JSON(super)
+    l_b = super
+    l_b.nil? ? nil : JSON(l_b)
   end
   def words
     JSON(super)
@@ -66,7 +68,7 @@ class Game < ApplicationRecord
   end
 
   def all_players_are_done?
-    self.current_player == 0
+    self.players_turn == 0
   end
 
   def no_active_players?
@@ -143,6 +145,13 @@ class Game < ApplicationRecord
       letter_bag: JSON(new_letter_bag),
       current_turn: current_turn + 1, 
       players_turn: next_players_turn
+    )
+  end
+
+  def summarize_results
+    self.update(
+      current_turn: current_turn - 1,
+      players_turn: players_turn == 0 ? (self.players.size - 1) : (players_turn - 1),
     )
   end
 

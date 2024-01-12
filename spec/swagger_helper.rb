@@ -20,6 +20,7 @@ RSpec.configure do |config|
         title: 'API',
         version: '1'
       },
+      # basePath: '/api/v1',
       components: {
         schemas: {
           Game: {
@@ -32,9 +33,18 @@ RSpec.configure do |config|
               winning_score: { type: :integer, example: 250 },
               winners: { type: :array, items: { type: :integer }},
               field: { type: :array, items: { type: :string }},
-              letter_array: { type: :array, items: { type: :string }},
-              language: { type: :string },
-              hand_size: { type: :integer },
+              letter_bag: { anyOf: [
+                { type: :array, items: { type: :string }},
+                {type: :null},
+              ] },
+              language: { anyOf: [
+                {type: :string},
+                {type: :null},
+              ] },
+              hand_size: { anyOf: [
+                { type: :integer },
+                {type: :null},
+              ] },
               players: {
                 type: :array,
                 items: { '$ref': '#/components/schemas/Player' }

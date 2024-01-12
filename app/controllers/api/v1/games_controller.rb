@@ -1,8 +1,8 @@
 class Api::V1::GamesController < Api::V1::ApplicationController
   include Authentication
   include Validation
-  before_action :authorize_request, except: [:index, :new_game, :join_game, :delete]
-  before_action :validate_payload, except: [:index, :new_game, :join_game, :delete]
+  before_action :authorize_request, except: [:index, :new_game, :join_game]
+  before_action :validate_payload, except: [:index, :new_game, :join_game]
 
   def index
     render_game(Game.all, true)
@@ -73,23 +73,14 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   def leave_game
     current_player.update(active_player: false)
-    
+
     game.reload
     if game.no_active_players?
-      game.end_game!
-      return render_game(game)
+      game.destroy
+      return render json: { success: "Last player left the game, game deleted!" }, status: 200
     end
 
     render json: { success: "Player left the game!" }, status: 200
-  end
-
-  def delete
-    # game.destroy!(current_player)
-    if Game.destroy_by(id: params[:id])
-      render json: { success: "Game deleted!" }, status: 200
-    else
-      render json: { error: "Something has gone wrong!" }, status: 400
-    end
   end
 
   private

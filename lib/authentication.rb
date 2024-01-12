@@ -1,5 +1,5 @@
 module Authentication
-  SECRET_KEY = Rails.application.secrets.secret_key_base
+  SECRET_KEY = Rails.application.secret_key_base # Rails.application.secrets.secret_key_base
   ENCRIPTION_METHOD = 'HS256'
 
   private
