@@ -21,8 +21,10 @@ components:
           type: string
           example: in_lobby
         winning_score:
-          type: integer
-          example: 250
+          anyOf:
+          - type: integer
+            example: 250
+          - type: 'null'
         winners:
           type: array
           items:
@@ -176,6 +178,10 @@ paths:
                   type: integer
                   example: '8'
                   description: Default for russian is 7.
+                winning_score:
+                  type: integer
+                  example: '120'
+                  description: Default is 150.
               required:
               - language
   "/api/v1/submit_turn":
@@ -256,6 +262,32 @@ paths:
                 properties:
                   game:
                     "$ref": "#/components/schemas/Game"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exchange_letters:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - т
+                  - т
+                  - ш
+                hand:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - з
+                  - й
+                  - ь
+                  - щ
+              required:
+              - exchange_letters
+              - hand
   "/api/v1/leave_game":
     post:
       summary: Makes player inactive.

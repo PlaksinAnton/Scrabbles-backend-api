@@ -30,20 +30,23 @@ RSpec.configure do |config|
               current_turn: { type: :integer, example: 0 },
               players_turn: { type: :integer, example: 1 },
               game_state: { type: :string, example: "in_lobby" },
-              winning_score: { type: :integer, example: 250 },
+              winning_score: { anyOf: [
+                { type: :integer, example: 250 },
+                { type: :null },
+              ] },
               winners: { type: :array, items: { type: :integer }},
               field: { type: :array, items: { type: :string }},
               letter_bag: { anyOf: [
                 { type: :array, items: { type: :string }},
-                {type: :null},
+                { type: :null },
               ] },
               language: { anyOf: [
-                {type: :string},
-                {type: :null},
+                { type: :string},
+                { type: :null },
               ] },
               hand_size: { anyOf: [
                 { type: :integer },
-                {type: :null},
+                { type: :null },
               ] },
               players: {
                 type: :array,

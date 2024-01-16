@@ -12,7 +12,7 @@ class Game < ApplicationRecord
     state :players_turn
     state :game_ended
 
-    event :add_player, if: [:enough_space?, :valid_nickname?] do
+    event :add_player, if: [:enough_space?] do
       transitions from: :in_lobby, to: :in_lobby, after: :create_player
     end
 
@@ -37,15 +37,14 @@ class Game < ApplicationRecord
     end
   end
 
-  attr_accessor :submitted_data, :created_player_id
+  attr_accessor :created_player_id
 
   def set_defaults
     self.current_turn = 0
     self.players_turn = 0
-    self.winnig_score = 5 ##
     self.winners = '[]'
     self.words = '[]'
-    # self.letter_bag = nil
+    # self.letter_bag = nil   
     self.field = JSON(Array.new(225){''})
   end
 
@@ -102,20 +101,24 @@ class Game < ApplicationRecord
       item[1].times { letter_array << item[0].to_s }
     end
 
+    winnig_score = configuration_params[:winnig_score] || SETTINGS.dig('game_mode', 'score', 'winning_score') 
+    raise "Winning score is misspelled or to big: #{winnig_score}!" if !winnig_score.integer? || winnig_score < 1 || winnig_score > 400
+
     self.update(
       letter_bag: JSON(letter_array),
       language: lang,
       hand_size: hand_size,
+      winnig_score: winnig_score,
     )
   end
 
-  def process_turn
-    shortfall = submitted_data[:letters].size
+  def process_turn(_current_player, submit_params)
+    shortfall = submit_params[:letters].size
     new_letter_bag = self.letter_bag
-    refilled_hand = submitted_data[:hand].concat(new_letter_bag.sample!(shortfall))
+    refilled_hand = submit_params[:hand].concat(new_letter_bag.sample!(shortfall))
 
     player = self.players[players_turn]
-    new_score = player.score + count_score(@new_field, @new_words)
+    new_score = player.score + count_score(@new_field, @new_words, submit_params)
 
     player.update(
       hand: JSON(refilled_hand),
@@ -127,18 +130,18 @@ class Game < ApplicationRecord
 
     self.update(
       field: JSON(@new_field),
-      letter_bag: JSON(new_letter_bag), 
-      current_turn: current_turn + 1, 
+      letter_bag: JSON(new_letter_bag),
+      current_turn: current_turn + 1,
       players_turn: next_players_turn,
       winners: JSON(winners),
       words: JSON(@new_words),
     )
   end
 
-  def exchange_letters
-    shortfall = submitted_data[:letters].size
-    new_letter_bag = self.letter_bag.concat(submitted_data[:letters])
-    refilled_hand = submitted_data[:hand].concat(new_letter_bag.sample!(shortfall))
+  def exchange_letters(_current_player, exchange_params)
+    shortfall = exchange_params[:exchange_letters].size
+    new_letter_bag = self.letter_bag.concat(exchange_params[:exchange_letters])
+    refilled_hand = exchange_params[:hand].concat(new_letter_bag.sample!(shortfall))
 
     self.players[players_turn].update(hand: JSON(refilled_hand))
     self.update(
@@ -163,9 +166,9 @@ class Game < ApplicationRecord
     next_players_turn
   end
 
-  def valid_turn?
+  def valid_turn?(_current_player, submit_params)
     @new_field = self.field
-    submitted_data[:positions].each_with_index{|position, id| @new_field[position] = submitted_data[:letters][id] }
+    submit_params[:positions].each_with_index{|position, id| @new_field[position] = submit_params[:letters][id] }
 
     words_from_field = parse_field(@new_field)
     valid_spelling?(words_from_field.map { |word| word[:spelling] })
@@ -219,7 +222,7 @@ class Game < ApplicationRecord
     end
   end
 
-  def count_score(new_field, words_positions)
+  def count_score(new_field, words_positions, submit_params)
     new_words_positions = words_positions - self.words
     score = 0
 
@@ -230,7 +233,7 @@ class Game < ApplicationRecord
       word_positions.each do |letter_position|
         letter_weights = SETTINGS.dig('language', self.language, 'letter_weights')
         letter_weight = letter_weights[new_field[letter_position]]
-        if submitted_data[:positions].delete(letter_position)
+        if submit_params[:positions].delete(letter_position)
           letter_weight *= SETTINGS['letter_bonus'][letter_position]
           word_multiplier *= SETTINGS['word_bonus'][letter_position]
         end
@@ -246,10 +249,10 @@ class Game < ApplicationRecord
     true
   end
 
-  def valid_nickname?(nickname)
-    raise "Empty nickname!" if nickname.blank?
-    true
-  end
+  # def valid_nickname?(nickname) # уже реализовано в контроллере
+  #   raise "Empty nickname!" if nickname.blank?
+  #   true
+  # end
 
   def enough_players?
     raise "Not enough players!" if self.players.size < 2

@@ -79,6 +79,7 @@ RSpec.describe 'api/v1/games', type: :request do
         properties: {
           language: { type: :string, example: 'rus', description: 'Only russian for now.' },
           hand_size: { type: :integer, example: '8', description: 'Default for russian is 7.' },
+          winning_score: { type: :integer, example: '120', description: 'Default is 150.' }
         },
         required: [ :language ]
       }
@@ -127,23 +128,24 @@ RSpec.describe 'api/v1/games', type: :request do
   path '/api/v1/exchange' do
     post('Returns deleted letters from hand to letter bag and drags new ones.') do
       tags 'Gameplay'
+      consumes 'application/json'
       produces 'application/json'
       security [ JWT: {} ]
       parameter name: :Authorization, in: :header, type: :string
       parameter name: :payload, in: :body, schema: {
         type: :object,
         properties: {
-          letters: { type: :array, items: { type: :string }, example: ['т', 'т', 'ш'] },
+          exchange_letters: { type: :array, items: { type: :string }, example: ['т', 'т', 'ш'] },
           hand: { type: :array, items: { type: :string }, example: ['з', 'й', 'ь', 'щ'] }
         },
-        required: [ :letters, :hand ]
+        required: [ :exchange_letters, :hand ]
       }
 
       response(200, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }
-        let(:payload) { {letters:['т', 'т', 'ш'], hand: ['з', 'й', 'ь', 'щ']} }
+        let(:payload) { {exchange_letters:['т', 'т', 'ш'], hand: ['з', 'й', 'ь', 'щ']} }
         run_test!
       end
     end

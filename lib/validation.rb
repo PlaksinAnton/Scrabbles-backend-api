@@ -6,9 +6,9 @@ module Validation
 
   def validate_payload
     self.game = Game.find_by(id: self.payload['game'])
-    game_not_found unless self.game
+    return game_not_found unless self.game
     self.current_player = self.game.players.find_by(id: self.payload['sub'])
-    player_not_found unless self.current_player
+    return player_not_found unless self.current_player
   end
 
   def validate_player
@@ -22,10 +22,10 @@ module Validation
   end
 
   def game_not_found
-    render json: { error: "Game not found!" }, status: :unauthorized
+    render json: { error: "Bad token. Game not found!" }, status: :unauthorized
   end
 
   def player_not_found
-    render json: { error: "Player not found!" }, status: :unauthorized
+    render json: { error: "Bad token. Player not found!" }, status: :unauthorized
   end
 end
