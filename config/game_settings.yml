@@ -37,7 +37,7 @@ language:
   rus:
     hand_size: 7
     letter_bag:
-      'a': 10
+      'а': 10
       'б': 3
       'в': 5
       'г': 3
