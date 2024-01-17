@@ -1,8 +1,7 @@
 module Validation
 
   private
-  attr_accessor :current_player
-  attr_accessor :game
+  attr_accessor :current_player, :game
 
   def validate_payload
     self.game = Game.find_by(id: self.payload['game'])

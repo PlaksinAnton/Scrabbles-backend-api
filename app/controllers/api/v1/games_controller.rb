@@ -5,20 +5,26 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   before_action :validate_payload, except: [:index, :new_game, :join_game]
 
   def index
-    generate_response(game: Game.all, plural: true)
+    render_response(game: Game.all, plural: true)
   end
 
   #############
   def show
-    generate_response(game: game)
+    render_response(game: game)
   end
 
   def new_game
     game = Game.create
-    game.add_player!(player_params[:nickname])
 
-    set_token(game.created_player_id, game.id)
-    generate_response(game: game, status_code: :created)
+    begin
+      game.add_player!(player_params[:nickname])
+    rescue ActionController::ParameterMissing => e
+      render_exception(e, :bad_request)
+      
+    else
+      set_token(game.created_player_id, game.id)
+      render_response(game: game, status_code: :created)
+    end
   end
 
   def join_game
@@ -27,48 +33,60 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     begin
       game.add_player!(player_params[:nickname])
+
+    rescue ActionController::ParameterMissing, AASM::InvalidTransition => e
+      render_exception(e, :method_not_allowed)
     rescue RuntimeError => e
-      return render json: { error: e.message }, status: :bad_request
+      render_exception(e, :bad_request)
+
+    else
+      set_token(game.created_player_id, game.id)
+      render_response(game: game)
     end
-    
-    set_token(game.created_player_id, game.id)
-    generate_response(game: game)
   end
 
   def start_game
     begin
       game.start!(current_player, configuration_params)
-    rescue RuntimeError => e
-      return render json: { error: e.message }, status: :bad_request
-    end
 
-    generate_response(game: game)
+    rescue AASM::InvalidTransition => e
+      render_exception(e, :method_not_allowed)
+    rescue RuntimeError => e
+      render_exception(e, :bad_request)
+
+    else
+      render_response(game: game)
+    end
   end
 
   def submit_turn
     begin
       game.next_turn!(current_player, submit_params)
-    # rescue AASM::InvalidTransition => e
-    #   return render json: { error: e.message }, status: :method_not_allowed
-    rescue RuntimeError => e
-      return render json: { error: e.message }, status: :bad_request
-    end
 
-    game.end_game! if game.game_has_a_winner? && game.all_players_are_done? 
-    
-    generate_response(game: game)
+    rescue AASM::InvalidTransition => e
+      render_exception(e, :method_not_allowed)
+    rescue RuntimeError => e
+      render_exception(e, :bad_request)
+
+    else
+      game.end_game! if game.game_has_a_winner? && game.all_players_are_done? 
+      render_response(game: game)
+    end
   end
 
   def exchange
     begin
       game.exchange!(current_player, exchange_params)
+
+    rescue AASM::InvalidTransition => e
+      render_exception(e, :method_not_allowed)
     rescue RuntimeError => e
-      return render json: { error: e.message }, status: :bad_request
+      render_exception(e, :bad_request)
+
+    else
+      game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
+      render_response(game: game)
     end
-
-    game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
-
-    generate_response(game: game)
   end
 
   def leave_game
@@ -84,12 +102,16 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   private
-  def generate_response(game:, plural: false, status_code: :ok)
+  def render_response(game:, plural: false, status_code: :ok)
     sym = plural ? :games : :game
     render json: {sym => game},
       except: [:created_at, :updated_at, :words],
       include: {players: {except: [:game_id, :created_at, :updated_at]}},
       status: status_code
+  end
+
+  def render_exception(exception, status)
+    render json: { error: exception.message }, status: status
   end
 
   def player_params
