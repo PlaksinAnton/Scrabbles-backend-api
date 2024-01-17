@@ -1,8 +1,8 @@
 class Api::V1::GamesController < Api::V1::ApplicationController
   include Authentication
   include Validation
-  before_action :authorize_request, except: [:index, :new_game, :join_game]
-  before_action :validate_payload, except: [:index, :new_game, :join_game]
+  before_action :authorize_request, except: [:index, :new_game, :join_game, :spelling_check]
+  before_action :validate_payload, except: [:index, :new_game, :join_game, :spelling_check]
 
   def index
     render_response(game: Game.all, plural: true)
@@ -20,7 +20,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       game.add_player!(player_params[:nickname])
     rescue ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
-      
+
     else
       set_token(game.created_player_id, game.id)
       render_response(game: game, status_code: :created)
@@ -101,6 +101,20 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     render json: { success: "Player left the game!" }
   end
 
+  def spelling_check
+    begin
+      Game.valid_spelling?([spelling_params[:word]])
+      
+    rescue ActionController::ParameterMissing => e
+      render_exception(e, :bad_request)
+    rescue RuntimeError => e
+      binding.pry
+      render json: { correct_spelling: false }
+    else
+      render json: { correct_spelling: true }
+    end
+  end
+
   private
   def render_response(game:, plural: false, status_code: :ok)
     sym = plural ? :games : :game
@@ -140,5 +154,12 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       obj.require(key)
     end
     res.permit(letters: [], hand: [])
+  end
+
+  def spelling_params
+    res = [:word].each_with_object(params) do |key, obj|
+      obj.require(key)
+    end
+    res.permit(:word)
   end
 end

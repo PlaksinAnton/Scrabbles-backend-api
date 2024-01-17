@@ -167,6 +167,29 @@ RSpec.describe 'api/v1/games', type: :request do
     end
   end
 
+  path '/api/v1/spelling_check' do
+    post('Check if the specified word is in the dictionary.') do
+      tags 'Optional'
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :payload, in: :body, schema: {
+        type: :object,
+        properties: {
+          word: { type: :string, example: "слово" },
+        },
+        required: [ :word ]
+      }
+
+      response(200, 'successful') do
+        schema properties: {
+          correct_spelling: { type: :boolean, example: true },
+        }
+        let(:payload) { { word: "слово" } }
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/games' do
     get('List of all games in the system.') do
       tags 'Usefull'

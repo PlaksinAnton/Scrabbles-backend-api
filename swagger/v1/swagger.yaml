@@ -310,6 +310,33 @@ paths:
                   success:
                     type: string
                     example: Player left the game!
+  "/api/v1/spelling_check":
+    post:
+      summary: Check if the specified word is in the dictionary.
+      tags:
+      - Optional
+      parameters: []
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  correct_spelling:
+                    type: boolean
+                    example: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                word:
+                  type: string
+                  example: слово
+              required:
+              - word
   "/api/v1/games":
     get:
       summary: List of all games in the system.

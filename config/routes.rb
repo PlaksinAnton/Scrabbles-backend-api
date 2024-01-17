@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       post 'submit_turn', to: 'games#submit_turn' # Token
       post 'exchange', to: 'games#exchange' # Token
       post 'leave_game', to: 'games#leave_game' # Token
+      post 'spelling_check', to: 'games#spelling_check'
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

@@ -37,6 +37,18 @@ class Game < ApplicationRecord
     end
   end
 
+  def self.valid_spelling?(words)
+    dic = File.read('lib/russian_nouns.txt')
+    words.each do |word|
+      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
+        raise "Words verification failed: couldn't find the word '#{word}'"
+      end
+    end
+    true
+    # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
+    # return false
+  end
+
   attr_accessor :created_player_id
 
   def set_defaults
@@ -171,7 +183,7 @@ class Game < ApplicationRecord
     submit_params[:positions].each_with_index{|position, id| @new_field[position] = submit_params[:letters][id] }
 
     words_from_field = parse_field(@new_field)
-    valid_spelling?(words_from_field.map { |word| word[:spelling] })
+    self.class.valid_spelling?(words_from_field.map { |word| word[:spelling] })
     @new_words = words_from_field.map { |word| word[:positions] }
     true
   end
@@ -278,18 +290,6 @@ class Game < ApplicationRecord
   
   def bottom_letter_exists?(field, i)
     i < 210 && field[i+15].present?
-  end
-
-  def valid_spelling?(words)
-    dic = File.read('lib/russian_nouns.txt')
-    words.each do |word|
-      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
-        raise "Words verification failed: couldn't find the word '#{word}'"
-      end
-    end
-    true
-    # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
-    # return false
   end
 
   def randomize_id
