@@ -118,9 +118,10 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   private
   def render_response(game:, plural: false, status_code: :ok)
     sym = plural ? :games : :game
+    curr_id = current_player&.id
     render json: {sym => game},
       except: [:created_at, :updated_at, :words],
-      include: {players: {except: [:game_id, :created_at, :updated_at]}},
+      include: {players: {except: [:game_id, :created_at, :updated_at], custom_methods: {hide_hands: curr_id}}},
       status: status_code
   end
 

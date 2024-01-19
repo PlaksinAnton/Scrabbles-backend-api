@@ -11,4 +11,12 @@ class Player < ApplicationRecord
   def hand
     JSON(super)
   end
+
+  def vhand(id)
+    if id == self.id
+      JSON(hand)
+    else
+      'Don\'t peek ;)'
+    end
+  end
 end

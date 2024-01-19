@@ -45,8 +45,6 @@ class Game < ApplicationRecord
       end
     end
     true
-    # File.foreach('lib/russian_nouns.txt') { |line| return true if line =~ %r{^#{word}(?:\r|$)} }
-    # return false
   end
 
   attr_accessor :created_player_id
@@ -85,6 +83,13 @@ class Game < ApplicationRecord
   def no_active_players?
     self.players.each{|p| return false if p.active_player}
     true
+  end
+
+  def as_json(options = {}) # overload for custom rendering
+    json_to_return = super
+    binding.pry
+    find_and_execute_custom_methods(json_to_return, options)
+    return json_to_return
   end
 
   private
@@ -296,5 +301,25 @@ class Game < ApplicationRecord
     begin
       self.id = SecureRandom.random_number(1_000_000_000)
     end while Game.exists?(id: self.id)
+  end
+
+  def find_and_execute_custom_methods(json_to_return={}, options = {}) # for custom rendering
+    if options&.has_key?(:custom_methods) && json_to_return.present?
+      options[:custom_methods].keys.each do |method_key|
+        self.send(method_key, json_to_return, options[:custom_methods][method_key])
+      end
+    end
+    if options&.has_key?(:include) && json_to_return.present?
+      options[:include].keys.each do |key|
+        find_and_execute_custom_methods(json_to_return[key.to_s], options[:include][key])
+      end
+    end
+  end
+
+  def hide_hands(players_array, exept_this_player) # custom method for rendering
+    players_array.each do |player|
+      next if player['id'] == exept_this_player
+      player['hand'] = ["don't peek ;)"] unless player['hand'].empty?
+    end
   end
 end
