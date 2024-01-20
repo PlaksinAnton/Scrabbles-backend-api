@@ -37,7 +37,7 @@ class Game < ApplicationRecord
     end
   end
 
-  def self.valid_spelling?(words)
+  def self.correct_spelling?(words)
     dic = File.read('lib/russian_nouns.txt')
     words.each do |word|
       unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
@@ -93,11 +93,12 @@ class Game < ApplicationRecord
 
   private
   def create_player(nickname)
+    raise 'Nickname should be in string format!' unless nickname.class == String
     p = self.players.create(nickname: nickname, game_id: self.id)
     self.created_player_id = p.id
   end
 
-  def fill_hands(_current_player, configuration_params)
+  def fill_hands
     new_letter_bag = letter_bag
     
     self.players.map{ |p| p.update(hand: JSON(new_letter_bag.sample!(hand_size))) }
@@ -105,20 +106,26 @@ class Game < ApplicationRecord
     self.update(letter_bag: JSON(new_letter_bag), current_turn: 1)
   end
 
-  def set_configuration(_current_player, configuration_params)
-    lang = configuration_params[:language]
+  def set_configuration(_current_player, config_params)
+    lang = config_params[:language]
     raise "Unknown language: #{lang}!" unless SETTINGS['language'].include?(lang)
 
-    hand_size = configuration_params[:hand_size] || SETTINGS.dig('language', lang, 'hand_size')
-    raise "Unsuitable hand size: #{configuration_params[:hand_size]}!" if hand_size < 3 || hand_size > 15
+    hand_size = config_params[:hand_size]
+    if (not hand_size.nil?) && (hand_size.class != Integer || hand_size < 1 || hand_size > 25)
+      raise "Unsuitable hand size: #{hand_size}!" 
+    end
+    hand_size ||= SETTINGS.dig('language', lang, 'hand_size')
+
+    winning_score = config_params[:winning_score] 
+    if (not winning_score.nil?) && (winning_score.class != Integer || winning_score < 1 || winning_score > 400)
+      raise "Winning score is misspelled or to big: #{winning_score}!"
+    end
+    winning_score ||= SETTINGS.dig('game_mode', 'score', 'winning_score')
     
     letter_hash = SETTINGS.dig('language', lang, 'letter_bag')
     letter_array = letter_hash.each_with_object([]) do |item, letter_array|
       item[1].times { letter_array << item[0].to_s }
     end
-
-    winning_score = configuration_params[:winning_score] || SETTINGS.dig('game_mode', 'score', 'winning_score') 
-    raise "Winning score is misspelled or to big: #{winning_score}!" if !winning_score.integer? || winning_score < 1 || winning_score > 400
 
     self.update(
       letter_bag: JSON(letter_array),
@@ -155,6 +162,10 @@ class Game < ApplicationRecord
   end
 
   def exchange_letters(_current_player, exchange_params)
+    exchange_params[:exchange_letters].each{ |letter| raise "exchange_letters should be in string format!" if letter.class != String }
+    exchange_params[:hand].each{ |letter| raise "hand letters should be in string format!" if letter.class != String }
+    match_arrived_letters(exchange_params[:exchange_letters] + exchange_params[:hand])
+
     shortfall = exchange_params[:exchange_letters].size
     new_letter_bag = self.letter_bag.concat(exchange_params[:exchange_letters])
     refilled_hand = exchange_params[:hand].concat(new_letter_bag.sample!(shortfall))
@@ -183,13 +194,30 @@ class Game < ApplicationRecord
   end
 
   def valid_turn?(_current_player, submit_params)
+    if submit_params[:positions].size != submit_params[:letters].size
+      raise "Arrays positions and letters should be the same length!"
+    end
     @new_field = self.field
-    submit_params[:positions].each_with_index{|position, id| @new_field[position] = submit_params[:letters][id] }
+    submit_params[:positions].each_with_index do |position, id|
+      raise "positions should be in integer format!" if position.class != Integer
+      raise "This position is already occupied: #{@new_field[position]}" if @new_field[position].present?
+      raise "letters should be in string format!" if submit_params[:letters][id].class != String
+      @new_field[position] = submit_params[:letters][id]
+    end
+    (submit_params[:hand] || []).each{ |letter| raise "Hand letters should be in string format!" if letter.class != String }
+
+    match_arrived_letters(submit_params[:hand] + submit_params[:letters])
 
     words_from_field = parse_field(@new_field)
-    self.class.valid_spelling?(words_from_field.map { |word| word[:spelling] })
+    self.class.correct_spelling?(words_from_field.map { |word| word[:spelling] })
     @new_words = words_from_field.map { |word| word[:positions] }
     true
+  end
+
+  def match_arrived_letters(arrived_letters)
+    unless arrived_letters.sort == self.players[players_turn].hand.sort
+      raise "Some letters were lost or added!"
+    end
   end
 
   def parse_field(new_field)
@@ -276,7 +304,8 @@ class Game < ApplicationRecord
   end
 
   def submitting_players_turn?(current_player)
-    raise "It is the other player's turn!" unless self.players[players_turn].id == current_player.id
+    id = self.players[players_turn].id
+    raise "It is the other player's turn: #{id}!" unless current_player.id == id
     true
   end
   

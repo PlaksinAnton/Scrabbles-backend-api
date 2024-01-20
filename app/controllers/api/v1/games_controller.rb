@@ -18,7 +18,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     begin
       game.add_player!(player_params[:nickname])
-    rescue ActionController::ParameterMissing => e
+    rescue ActionController::ParameterMissing, RuntimeError => e
       render_exception(e, :bad_request)
 
     else
@@ -34,9 +34,9 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     begin
       game.add_player!(player_params[:nickname])
 
-    rescue ActionController::ParameterMissing, AASM::InvalidTransition => e
+    rescue AASM::InvalidTransition => e
       render_exception(e, :method_not_allowed)
-    rescue RuntimeError => e
+    rescue RuntimeError, ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
 
     else
@@ -51,7 +51,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     rescue AASM::InvalidTransition => e
       render_exception(e, :method_not_allowed)
-    rescue RuntimeError => e
+    rescue RuntimeError, ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
 
     else
@@ -65,7 +65,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     rescue AASM::InvalidTransition => e
       render_exception(e, :method_not_allowed)
-    rescue RuntimeError => e
+    rescue RuntimeError, ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
 
     else
@@ -80,7 +80,7 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
     rescue AASM::InvalidTransition => e
       render_exception(e, :method_not_allowed)
-    rescue RuntimeError => e
+    rescue RuntimeError, ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
 
     else
@@ -103,9 +103,9 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   def spelling_check
     begin
-      Game.valid_spelling?([spelling_params[:word]])
+      Game.correct_spelling?([spelling_params[:word]])
       
-    rescue ActionController::ParameterMissing => e
+    rescue RuntimeError, ActionController::ParameterMissing => e
       render_exception(e, :bad_request)
     rescue RuntimeError => e
       binding.pry
@@ -144,17 +144,17 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def submit_params
-    res = [:positions, :letters, :hand].each_with_object(params) do |key, obj|
+    res = [:positions, :letters].each_with_object(params) do |key, obj|
       obj.require(key)
     end
     res.permit(positions: [], letters: [], hand: [])
   end
 
   def exchange_params
-    res = [:letters, :hand].each_with_object(params) do |key, obj|
+    res = [:exchange_letters].each_with_object(params) do |key, obj|
       obj.require(key)
     end
-    res.permit(letters: [], hand: [])
+    res.permit(exchange_letters: [], hand: [])
   end
 
   def spelling_params
