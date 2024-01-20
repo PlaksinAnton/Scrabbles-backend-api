@@ -15,7 +15,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_28_161458) do
     t.integer "current_turn", null: false
     t.integer "players_turn", null: false
     t.string "game_state", null: false
-    t.integer "winnig_score"
+    t.integer "winning_score"
     t.string "winners", null: false
     t.string "words", null: false
     t.string "field", null: false

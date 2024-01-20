@@ -87,7 +87,6 @@ class Game < ApplicationRecord
 
   def as_json(options = {}) # overload for custom rendering
     json_to_return = super
-    binding.pry
     find_and_execute_custom_methods(json_to_return, options)
     return json_to_return
   end
@@ -118,14 +117,14 @@ class Game < ApplicationRecord
       item[1].times { letter_array << item[0].to_s }
     end
 
-    winnig_score = configuration_params[:winnig_score] || SETTINGS.dig('game_mode', 'score', 'winning_score') 
-    raise "Winning score is misspelled or to big: #{winnig_score}!" if !winnig_score.integer? || winnig_score < 1 || winnig_score > 400
+    winning_score = configuration_params[:winning_score] || SETTINGS.dig('game_mode', 'score', 'winning_score') 
+    raise "Winning score is misspelled or to big: #{winning_score}!" if !winning_score.integer? || winning_score < 1 || winning_score > 400
 
     self.update(
       letter_bag: JSON(letter_array),
       language: lang,
       hand_size: hand_size,
-      winnig_score: winnig_score,
+      winning_score: winning_score,
     )
   end
 
@@ -143,7 +142,7 @@ class Game < ApplicationRecord
     )
 
     winners = self.winners
-    winners << self.players_turn if new_score >= self.winnig_score
+    winners << self.players_turn if new_score >= self.winning_score
 
     self.update(
       field: JSON(@new_field),

@@ -137,10 +137,10 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def configuration_params
-    res = [:language, :hand_size, :winnig_score].each_with_object(params) do |key, obj|
+    res = [:language].each_with_object(params) do |key, obj|
       obj.require(key)
     end
-    res.permit(:language, :hand_size, :winnig_score)
+    res.permit(:language, :hand_size, :winning_score)
   end
 
   def submit_params
