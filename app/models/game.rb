@@ -200,7 +200,7 @@ class Game < ApplicationRecord
     @new_field = self.field
     submit_params[:positions].each_with_index do |position, id|
       raise "positions should be in integer format!" if position.class != Integer
-      raise "This position is already occupied: #{@new_field[position]}" if @new_field[position].present?
+      raise "This position is already occupied: #{position}" if @new_field[position].present?
       raise "letters should be in string format!" if submit_params[:letters][id].class != String
       @new_field[position] = submit_params[:letters][id]
     end
