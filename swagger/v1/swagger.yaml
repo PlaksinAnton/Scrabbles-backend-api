@@ -375,4 +375,4 @@ paths:
                   game:
                     "$ref": "#/components/schemas/Game"
 servers:
-- url: http://localhost:3000
+- url: http://localhost:8081

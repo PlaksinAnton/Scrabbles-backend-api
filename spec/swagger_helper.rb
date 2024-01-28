@@ -81,7 +81,7 @@ RSpec.configure do |config|
       paths: {},
       servers: [
         {
-          url: 'http://localhost:3000',
+          url: 'http://localhost:8081',
           # variables: {
           #   defaultHost: {
           #     default: 'www.example.com'
