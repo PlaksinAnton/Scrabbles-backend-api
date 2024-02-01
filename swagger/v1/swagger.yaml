@@ -311,7 +311,9 @@ paths:
                     "$ref": "#/components/schemas/Game"
   "/api/v1/leave_game":
     post:
-      summary: Makes player inactive.
+      summary: "Sets player's 'active_player' flag to false.\n    An inactive player
+        is considered to have left the game and skips his turns. \n    When there
+        are no active players, the game is deleted."
       tags:
       - Gameplay
       security:
@@ -331,6 +333,28 @@ paths:
                   success:
                     type: string
                     example: Player left the game!
+  "/api/v1/suggest_finishing":
+    post:
+      summary: "Sets player's 'want_to_end' flag to true. \n    As soon as all players
+        'want to end', game ends prematurely."
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
   "/api/v1/spelling_check":
     post:
       summary: Check if the specified word is in the dictionary.

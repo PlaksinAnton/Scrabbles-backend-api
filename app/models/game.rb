@@ -33,7 +33,7 @@ class Game < ApplicationRecord
     end
 
     event :end_game do
-      transitions from: :players_turn, to: :game_ended, after: :summarize_results
+      transitions from: :players_turn, to: :game_ended
     end
 
     event :surrender, if: :submitting_players_turn? do ##
@@ -180,7 +180,7 @@ class Game < ApplicationRecord
     )
   end
 
-  def summarize_results
+  def summarize_results ## meh..
     self.update(
       current_turn: current_turn - 1,
       players_turn: players_turn == 0 ? (self.players.size - 1) : (players_turn - 1),

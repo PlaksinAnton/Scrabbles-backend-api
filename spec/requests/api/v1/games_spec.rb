@@ -168,7 +168,9 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/leave_game' do
-    post('Makes player inactive.') do
+    post("Sets player's 'active_player' flag to false.
+    An inactive player is considered to have left the game and skips his turns. 
+    When there are no active players, the game is deleted.") do
       tags 'Gameplay'
       produces 'application/json'
       security [ JWT: {} ]
@@ -177,6 +179,23 @@ RSpec.describe 'api/v1/games', type: :request do
       response(200, 'successful') do
         schema properties: {
           success: { type: :string, example: "Player left the game!" }
+        }
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/suggest_finishing' do
+    post("Sets player's 'want_to_end' flag to true. 
+    As soon as all players 'want to end', game ends prematurely.") do
+      tags 'Gameplay'
+      produces 'application/json'
+      security [ JWT: {} ]
+      parameter name: :Authorization, in: :header, type: :string
+
+      response(200, 'successful') do
+        schema properties: {
+          game: { '$ref' => '#/components/schemas/Game' }
         }
         run_test!
       end

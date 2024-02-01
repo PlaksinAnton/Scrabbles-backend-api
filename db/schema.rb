@@ -30,6 +30,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_28_161458) do
     t.string "nickname", null: false
     t.integer "score", null: false
     t.boolean "active_player", null: false
+    t.boolean "want_to_end", null: false
     t.string "hand", null: false
     t.integer "game_id", null: false
     t.datetime "created_at", null: false

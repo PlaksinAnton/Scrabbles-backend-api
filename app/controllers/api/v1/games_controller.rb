@@ -66,6 +66,14 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     render json: { success: "Player left the game!" }
   end
 
+  def suggest_finishing
+    return render_bad_request("Action available only from 'players_turn' state.") unless game.game_state == 'players_turn'
+    
+    current_player.update(want_to_end: true)
+    game.end_game! if game.reload.players.map{|p| p.want_to_end}.uniq == [true]
+    render_response(game: game)
+  end
+
   def spelling_check
     if Game.correct_wrod_spelling?(spelling_params[:word])
       render json: { correct_spelling: true }
@@ -85,11 +93,11 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def render_bad_request(exception)
-    render json: { error: exception.message }, status: :bad_request
+    render json: { error: exception.to_s }, status: :bad_request
   end
 
   def render_method_not_allowed(exception)
-    render json: { error: exception.message }, status: :method_not_allowed
+    render json: { error: exception.to_s }, status: :method_not_allowed
   end
 
   def player_params

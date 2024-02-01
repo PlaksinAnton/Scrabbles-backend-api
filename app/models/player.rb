@@ -3,9 +3,10 @@ class Player < ApplicationRecord
   before_create :set_defaults
   
   def set_defaults
-    self.active_player = true
     self.score = 0
     self.hand = '[]'
+    self.active_player = true
+    self.want_to_end = false
   end
 
   def hand

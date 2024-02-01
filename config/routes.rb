@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       post 'exchange', to: 'games#exchange'
       post 'skip_turn', to: 'games#skip_turn'
       post 'leave_game', to: 'games#leave_game'
+      post 'suggest_finishing', to: 'games#suggest_finishing'
       post 'spelling_check', to: 'games#spelling_check'
     end
   end

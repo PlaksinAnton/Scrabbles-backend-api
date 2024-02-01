@@ -4,6 +4,7 @@ class CreatePlayer < ActiveRecord::Migration[7.0]
       t.string :nickname, null: false
       t.integer :score, null: false
       t.boolean :active_player, null: false
+      t.boolean :want_to_end, null: false
       t.string :hand, null: false
       t.references :game, null: false, foreign_key: true
 
