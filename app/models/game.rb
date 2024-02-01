@@ -41,14 +41,9 @@ class Game < ApplicationRecord
     end
   end
 
-  def self.correct_spelling?(words)
+  def self.correct_wrod_spelling?(word)
     dic = File.read('lib/russian_nouns.txt')
-    words.each do |word|
-      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
-        raise "Words verification failed: couldn't find the word '#{word}'"
-      end
-    end
-    true
+    dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
   end
 
   attr_accessor :created_player_id
@@ -216,8 +211,18 @@ class Game < ApplicationRecord
     match_arrived_letters(submit_params[:hand] + submit_params[:letters])
 
     words_from_field = parse_field(@new_field)
-    self.class.correct_spelling?(words_from_field.map { |word| word[:spelling] })
+    correct_spelling?(words_from_field.map { |word| word[:spelling] })
     @new_words = words_from_field.map { |word| word[:positions] }
+    true
+  end
+
+  def correct_spelling?(words)
+    dic = File.read('lib/russian_nouns.txt')
+    words.each do |word|
+      unless dic =~ %r{(?:^|\n)#{word}(?:$|\r)}
+        raise "Words verification failed: couldn't find the word '#{word}'"
+      end
+    end
     true
   end
 

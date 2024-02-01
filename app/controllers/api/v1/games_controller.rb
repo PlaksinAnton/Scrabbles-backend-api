@@ -3,6 +3,8 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   include Validation
   before_action :authorize_request, except: [:index, :new_game, :join_game, :spelling_check]
   before_action :validate_payload, except: [:index, :new_game, :join_game, :spelling_check]
+  rescue_from RuntimeError, ActionController::ParameterMissing, with: :render_bad_request
+  rescue_from AASM::InvalidTransition, with: :render_method_not_allowed
 
   def index
     render_response(game: Game.all, plural: true)
@@ -15,98 +17,46 @@ class Api::V1::GamesController < Api::V1::ApplicationController
 
   def new_game
     game = Game.create
+    game.add_player!(player_params[:nickname])
 
-    begin
-      game.add_player!(player_params[:nickname])
-    rescue ActionController::ParameterMissing, RuntimeError => e
-      render_exception(e, :bad_request)
-
-    else
-      set_token(game.created_player_id, game.id)
-      render_response(game: game, status_code: :created)
-    end
+    set_token(game.created_player_id, game.id)
+    render_response(game: game, status_code: :created)
   end
 
   def join_game
     game = Game.find_by(id: params[:game_id])
     return render json: { error: "Game not found!" }, status: :bad_request unless game
 
-    begin
-      game.add_player!(player_params[:nickname])
-
-    rescue AASM::InvalidTransition => e
-      render_exception(e, :method_not_allowed)
-    rescue RuntimeError, ActionController::ParameterMissing => e
-      render_exception(e, :bad_request)
-
-    else
-      set_token(game.created_player_id, game.id)
-      render_response(game: game)
-    end
+    game.add_player!(player_params[:nickname])
+    set_token(game.created_player_id, game.id)
+    render_response(game: game)
   end
 
   def start_game
-    begin
-      game.start!(current_player, configuration_params)
-
-    rescue AASM::InvalidTransition => e
-      render_exception(e, :method_not_allowed)
-    rescue RuntimeError, ActionController::ParameterMissing => e
-      render_exception(e, :bad_request)
-
-    else
-      render_response(game: game)
-    end
+    game.start!(current_player, configuration_params)
+    render_response(game: game)
   end
 
   def submit_turn
-    begin
-      game.next_turn!(current_player, submit_params)
-
-    rescue AASM::InvalidTransition => e
-      render_exception(e, :method_not_allowed)
-    rescue RuntimeError, ActionController::ParameterMissing => e
-      render_exception(e, :bad_request)
-
-    else
-      game.end_game! if game.game_has_a_winner? && game.all_players_are_done? 
-      render_response(game: game)
-    end
+    game.next_turn!(current_player, submit_params)
+    game.end_game! if game.game_has_a_winner? && game.all_players_are_done? 
+    render_response(game: game)
   end
 
   def exchange
-    begin
-      game.exchange!(current_player, exchange_params)
-
-    rescue AASM::InvalidTransition => e
-      render_exception(e, :method_not_allowed)
-    rescue RuntimeError, ActionController::ParameterMissing => e
-      render_exception(e, :bad_request)
-
-    else
-      game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
-      render_response(game: game)
-    end
+    game.exchange!(current_player, exchange_params)
+    game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
+    render_response(game: game)
   end
 
   def skip_turn
-    begin
-      game.skip_turn!(current_player)
-    rescue AASM::InvalidTransition => e
-      render_exception(e, :method_not_allowed)
-    rescue RuntimeError => e
-      render_exception(e, :bad_request)
-
-    else
-      game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
-      render_response(game: game)
-    end
-    
+    game.skip_turn!(current_player)
+    game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
+    render_response(game: game)
   end
 
   def leave_game
     current_player.update(active_player: false)
-
     game.reload
     if game.no_active_players?
       game.destroy
@@ -117,16 +67,10 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   end
 
   def spelling_check
-    begin
-      Game.correct_spelling?([spelling_params[:word]])
-      
-    rescue RuntimeError, ActionController::ParameterMissing => e
-      render_exception(e, :bad_request)
-    rescue RuntimeError => e
-      binding.pry
-      render json: { correct_spelling: false }
-    else
+    if Game.correct_wrod_spelling?(spelling_params[:word])
       render json: { correct_spelling: true }
+    else
+      render json: { correct_spelling: false }
     end
   end
 
@@ -140,8 +84,12 @@ class Api::V1::GamesController < Api::V1::ApplicationController
       status: status_code
   end
 
-  def render_exception(exception, status)
-    render json: { error: exception.message }, status: status
+  def render_bad_request(exception)
+    render json: { error: exception.message }, status: :bad_request
+  end
+
+  def render_method_not_allowed(exception)
+    render json: { error: exception.message }, status: :method_not_allowed
   end
 
   def player_params
