@@ -288,6 +288,27 @@ paths:
               required:
               - exchange_letters
               - hand
+  "/api/v1/skip_turn":
+    post:
+      summary: Allows player to skip his turn.
+      tags:
+      - Gameplay
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
   "/api/v1/leave_game":
     post:
       summary: Makes player inactive.

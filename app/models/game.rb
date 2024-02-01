@@ -24,8 +24,12 @@ class Game < ApplicationRecord
       transitions from: :players_turn, to: :players_turn, after: :process_turn
     end
 
-    event :exchange, if: :submitting_players_turn? do
+    event :exchange, if: [:submitting_players_turn?, :valid_exchange?] do
       transitions from: :players_turn, to: :players_turn, after: :exchange_letters
+    end
+
+    event :skip_turn, if: :submitting_players_turn? do
+      transitions from: :players_turn, to: :players_turn, after: :update_turns
     end
 
     event :end_game do
@@ -162,10 +166,6 @@ class Game < ApplicationRecord
   end
 
   def exchange_letters(_current_player, exchange_params)
-    exchange_params[:exchange_letters].each{ |letter| raise "exchange_letters should be in string format!" if letter.class != String }
-    exchange_params[:hand].each{ |letter| raise "hand letters should be in string format!" if letter.class != String }
-    match_arrived_letters(exchange_params[:exchange_letters] + exchange_params[:hand])
-
     shortfall = exchange_params[:exchange_letters].size
     new_letter_bag = self.letter_bag.concat(exchange_params[:exchange_letters])
     refilled_hand = exchange_params[:hand].concat(new_letter_bag.sample!(shortfall))
@@ -173,6 +173,13 @@ class Game < ApplicationRecord
     self.players[players_turn].update(hand: JSON(refilled_hand))
     self.update(
       letter_bag: JSON(new_letter_bag),
+      current_turn: current_turn + 1, 
+      players_turn: next_players_turn
+    )
+  end
+
+  def update_turns
+    self.update(
       current_turn: current_turn + 1, 
       players_turn: next_players_turn
     )
@@ -211,6 +218,13 @@ class Game < ApplicationRecord
     words_from_field = parse_field(@new_field)
     self.class.correct_spelling?(words_from_field.map { |word| word[:spelling] })
     @new_words = words_from_field.map { |word| word[:positions] }
+    true
+  end
+
+  def valid_exchange?(_current_player, exchange_params)
+    exchange_params[:exchange_letters].each{ |letter| raise "exchange_letters should be in string format!" if letter.class != String }
+    exchange_params[:hand].each{ |letter| raise "hand letters should be in string format!" if letter.class != String }
+    match_arrived_letters(exchange_params[:exchange_letters] + exchange_params[:hand])
     true
   end
 

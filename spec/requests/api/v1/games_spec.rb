@@ -151,6 +151,22 @@ RSpec.describe 'api/v1/games', type: :request do
     end
   end
 
+  path '/api/v1/skip_turn' do
+    post('Allows player to skip his turn.') do
+      tags 'Gameplay'
+      produces 'application/json'
+      security [ JWT: {} ]
+      parameter name: :Authorization, in: :header, type: :string
+
+      response(200, 'successful') do
+        schema properties: {
+          game: { '$ref' => '#/components/schemas/Game' }
+        }
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/leave_game' do
     post('Makes player inactive.') do
       tags 'Gameplay'

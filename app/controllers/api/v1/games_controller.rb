@@ -89,6 +89,21 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     end
   end
 
+  def skip_turn
+    begin
+      game.skip_turn!(current_player)
+    rescue AASM::InvalidTransition => e
+      render_exception(e, :method_not_allowed)
+    rescue RuntimeError => e
+      render_exception(e, :bad_request)
+
+    else
+      game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
+      render_response(game: game)
+    end
+    
+  end
+
   def leave_game
     current_player.update(active_player: false)
 
