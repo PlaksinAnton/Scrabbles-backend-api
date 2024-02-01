@@ -28,7 +28,7 @@ RSpec.describe 'api/v1/games', type: :request do
         required: [ :nickname ]
       }
 
-      response(200, 'successful') do
+      response(201, 'successful') do
         schema properties: {
           game: { '$ref' => '#/components/schemas/Game' }
         }

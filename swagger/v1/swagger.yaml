@@ -83,7 +83,7 @@ paths:
       - Gameplay
       parameters: []
       responses:
-        '200':
+        '201':
           description: successful
           headers:
             Token:

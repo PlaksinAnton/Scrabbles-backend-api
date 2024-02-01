@@ -61,8 +61,8 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     if game.no_active_players?
       game.destroy
       return render json: { success: "Last player left the game, game deleted!" }
-    end
 
+    end
     render json: { success: "Player left the game!" }
   end
 
