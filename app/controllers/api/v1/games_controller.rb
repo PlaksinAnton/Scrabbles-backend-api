@@ -2,17 +2,20 @@ class Api::V1::GamesController < Api::V1::ApplicationController
   include Authentication
   include Validation
   before_action :authorize_request, except: [:index, :new_game, :join_game, :spelling_check]
-  before_action :validate_payload, except: [:index, :new_game, :join_game, :spelling_check]
+  before_action :validate_payload, except: [:index, :quick_status, :new_game, :join_game, :spelling_check]
+  before_action :validate_game, only: [:quick_status]
   rescue_from RuntimeError, ActionController::ParameterMissing, with: :render_bad_request
   rescue_from AASM::InvalidTransition, with: :render_method_not_allowed
 
-  def index
-    render_response(game: Game.all, plural: true)
-  end
-
-  #############
   def show
     render_response(game: game)
+  end
+
+  def quick_status
+    render json: game,
+      only: [:id, :players_turn, :game_state],
+      include: {players: {only: [:id, :active_player, :want_to_end]}},
+      status: :ok
   end
 
   def new_game

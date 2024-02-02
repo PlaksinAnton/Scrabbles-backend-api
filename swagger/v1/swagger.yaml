@@ -66,6 +66,9 @@ components:
         active_player:
           type: boolean
           example: true
+        want_to_end:
+          type: boolean
+          example: false
         hand:
           type: array
           items:
@@ -288,9 +291,10 @@ paths:
               required:
               - exchange_letters
               - hand
-  "/api/v1/skip_turn":
+  "/api/v1/suggest_finishing":
     post:
-      summary: Allows player to skip his turn.
+      summary: "Sets player's 'want_to_end' flag to true. \n    As soon as all players
+        'want to end', game ends prematurely."
       tags:
       - Gameplay
       security:
@@ -333,12 +337,11 @@ paths:
                   success:
                     type: string
                     example: Player left the game!
-  "/api/v1/suggest_finishing":
+  "/api/v1/skip_turn":
     post:
-      summary: "Sets player's 'want_to_end' flag to true. \n    As soon as all players
-        'want to end', game ends prematurely."
+      summary: Allows player to skip his turn.
       tags:
-      - Gameplay
+      - Optional
       security:
       - JWT: {}
       parameters:
@@ -382,25 +385,9 @@ paths:
                   example: слово
               required:
               - word
-  "/api/v1/games":
-    get:
-      summary: List of all games in the system.
-      tags:
-      - Usefull
-      responses:
-        '200':
-          description: successful
-          content:
-            application/json:
-              schema:
-                properties:
-                  games:
-                    type: array
-                    items:
-                      "$ref": "#/components/schemas/Game"
   "/api/v1/show":
     get:
-      summary: Show game by token
+      summary: Show game by token. Deprecated, use status instead.
       tags:
       - Usefull
       security:
@@ -419,5 +406,71 @@ paths:
                 properties:
                   game:
                     "$ref": "#/components/schemas/Game"
+  "/api/v1/status":
+    get:
+      summary: Show full current game state by token.
+      tags:
+      - Usefull
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    "$ref": "#/components/schemas/Game"
+  "/api/v1/quick_status":
+    get:
+      summary: Show minimalistic game status by token.
+      tags:
+      - Usefull
+      security:
+      - JWT: {}
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                properties:
+                  game:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 982478387
+                      players_turn:
+                        type: integer
+                        example: 1
+                      game_state:
+                        type: string
+                        example: in_lobby
+                      players:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 12
+                            active_player:
+                              type: boolean
+                              example: true
+                            want_to_end:
+                              type: boolean
+                              example: false
 servers:
 - url: http://localhost:8081

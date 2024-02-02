@@ -61,6 +61,7 @@ RSpec.configure do |config|
               nickname: { type: :string, example: 'Biba' },
               score: { type: :integer, example: 0 },
               active_player: { type: :boolean, example: true },
+              want_to_end: { type: :boolean, example: false },
               hand: { 
                 type: :array, 
                 items: { type: :string, example: ''}

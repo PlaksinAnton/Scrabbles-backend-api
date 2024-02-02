@@ -151,8 +151,9 @@ RSpec.describe 'api/v1/games', type: :request do
     end
   end
 
-  path '/api/v1/skip_turn' do
-    post('Allows player to skip his turn.') do
+  path '/api/v1/suggest_finishing' do
+    post("Sets player's 'want_to_end' flag to true. 
+    As soon as all players 'want to end', game ends prematurely.") do
       tags 'Gameplay'
       produces 'application/json'
       security [ JWT: {} ]
@@ -185,10 +186,9 @@ RSpec.describe 'api/v1/games', type: :request do
     end
   end
 
-  path '/api/v1/suggest_finishing' do
-    post("Sets player's 'want_to_end' flag to true. 
-    As soon as all players 'want to end', game ends prematurely.") do
-      tags 'Gameplay'
+  path '/api/v1/skip_turn' do
+    post('Allows player to skip his turn.') do
+      tags 'Optional'
       produces 'application/json'
       security [ JWT: {} ]
       parameter name: :Authorization, in: :header, type: :string
@@ -225,32 +225,12 @@ RSpec.describe 'api/v1/games', type: :request do
     end
   end
 
-  path '/api/v1/games' do
-    get('List of all games in the system.') do
-      tags 'Usefull'
-      # consumes 'application/json'
-      produces 'application/json'
-
-      response(200, 'successful') do
-        schema properties: {
-          games: {
-          type: :array,
-          items: { '$ref' => '#/components/schemas/Game' }
-          }
-        }
-        run_test!
-      end
-    end
-  end
-
   path '/api/v1/show' do
-    get('Show game by token') do
+    get('Show game by token. Deprecated, use status instead.') do
       tags 'Usefull'
-      # consumes 'application/json'
       produces 'application/json'
       security [ JWT: {} ]
       parameter name: :Authorization, in: :header, type: :string
-      # parameter name: :security, in: :header, type: :string
 
       response(200, 'successful') do
         schema properties: {
@@ -260,4 +240,55 @@ RSpec.describe 'api/v1/games', type: :request do
       end
     end
   end
+
+  path '/api/v1/status' do
+    get('Show full current game state by token.') do
+      tags 'Usefull'
+      produces 'application/json'
+      security [ JWT: {} ]
+      parameter name: :Authorization, in: :header, type: :string
+
+      response(200, 'successful') do
+        schema properties: {
+          game: { '$ref' => '#/components/schemas/Game' }
+        }
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/quick_status' do
+    get('Show minimalistic game status by token.') do
+      tags 'Usefull'
+      produces 'application/json'
+      security [ JWT: {} ]
+      parameter name: :Authorization, in: :header, type: :string
+
+      response(200, 'successful') do
+        schema properties: {
+          game: {
+            type: 'object',
+            properties: {
+              id: { type: :integer, example: 982478387 },
+              players_turn: { type: :integer, example: 1 },
+              game_state: { type: :string, example: "in_lobby" },
+              players: {
+                type: :array,
+                items: { 
+                  type: 'object',
+                  properties: {
+                    id: { type: :integer, example: 12 },
+                    active_player: { type: :boolean, example: true },
+                    want_to_end: { type: :boolean, example: false }, 
+                  }
+                }
+              }
+            }
+          }
+        }
+        run_test!
+      end
+    end
+  end
+
 end

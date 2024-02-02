@@ -3,8 +3,9 @@ Rails.application.routes.draw do
   mount Rswag::Api::Engine => '/api/docs'
   namespace :api do
     namespace :v1 do
-      resources :games, only: [:index]
       get 'show', to: 'games#show'
+      get 'status', to: 'games#show'
+      get 'quick_status', to: 'games#quick_status'
       post 'new_game', to: 'games#new_game'
       post 'join_game/:game_id', to: 'games#join_game'
       post 'start_game', to: 'games#start_game'
