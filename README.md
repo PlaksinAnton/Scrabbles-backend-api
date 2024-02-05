@@ -1,21 +1,25 @@
 # Scrabble API-only application
-- [About the project](#about-the-project)
-    - [What?](#what)
-    - [Why?](#why)
-    - [State of the project](#state-of-the-project)
-    - [Working app in production](#working-app-in-production)
-    - [Used technologies](#used-technologies)
-    - [If you've never heard of Scrabble](#if-youve-never-heard-of-scrabble)
-- [API Documentation](#api-documentation)
-- [Aplication overview](#aplication-overview)
-  - [Game structure](#game-structure)
-  - [How does authentication work](#how-does-authentication-work)
-  - [Response JSON fields](#response-json-fields)
-  - [Game settings](#game-settings)
-- [How to run the application](#how-to-run-the-application)
-    - [Ubuntu + rbenv](#ubuntu--rbenv)
-- [Known issues](#known-issues)
-- [Future updates](#future-updates)
+- [Scrabble API-only application](#scrabble-api-only-application)
+  - [About the project](#about-the-project)
+      - [What?](#what)
+      - [Why?](#why)
+      - [State of the project](#state-of-the-project)
+      - [Working app in production](#working-app-in-production)
+      - [Used technologies](#used-technologies)
+      - [If you've never heard of Scrabble](#if-youve-never-heard-of-scrabble)
+  - [API Documentation](#api-documentation)
+  - [Aplication overview](#aplication-overview)
+    - [Game structure](#game-structure)
+    - [How does authentication work](#how-does-authentication-work)
+    - [Response JSON fields](#response-json-fields)
+      - [Game fields](#game-fields)
+      - [Player fields](#player-fields)
+    - [Game settings](#game-settings)
+      - [Score modifiers](#score-modifiers)
+  - [How to run the application](#how-to-run-the-application)
+      - [Ubuntu + rbenv](#ubuntu--rbenv)
+  - [Known issues](#known-issues)
+  - [Future updates](#future-updates)
 
 ## About the project
 ![screenshot goes here](/files/screenshot.png)  
@@ -67,7 +71,7 @@ Bearer Authentication is implemented through [JWT](https://jwt.io/introduction).
 
 Each user receives their web token via a response when entering the lobby.  Subsequently, the backend expects this token in almost every request in the 'Authorization' header. Currently, tokens is set to expire after 24 hours.
 
-The */new_game* and */join_game/{id}* endpoints send to users their personal JWT in the 'Token' header.   Information on which requests require a token and which do not can be further explored in the [API doc](##-API-Documentation).  
+The */new_game* and */join_game/{id}* endpoints send to users their personal JWT in the 'Token' header.   Information on which requests require a token and which do not can be further explored in the [API doc](#api-documentation).  
 
 ### Response JSON fields
 ![json screenshot goes here](/files/json_response.png)  
@@ -96,8 +100,8 @@ By default, the parameter is set to true. It is the frontend's responsibility to
 * **want_to_end**  
 This is another player's true/false vflag, that indicates their intention to stop the game. This intention should be visible to all players, allowing them to decide whether to accept or ignore it. As soon as all players are willing to end the game, the game ends immediately.  
 
-  > [!NOTE]  
-  > Information about other fields can be found in [API documentation](##-API-Documentation).  
+> [!NOTE]  
+> Information about other fields can be found in [API documentation](#api-documentation).  
 
 ### Game settings
 Such information as letters weights and field tile bonuses are specified in [game_settings.yml](/config/game_settings.yml). Also, there are some language-dependent default values. There are default hand size and initial contents of the letter bag for russian language.  
@@ -119,26 +123,37 @@ Premium squares:
 1. [Install Ruby](https://github.com/rbenv/rbenv) Version 3.2.2  
 
 2. Clone the repository  
-`$git clone https://github.com/PlaksinAnton/Scrubbles-backend-api.git`  
+```sh
+git clone https://github.com/PlaksinAnton/Scrabbles-backend-api.git
+```  
 And get in it.  
 
 3. Install dependencies  
-`$bundle install`  
+```sh
+bundle install
+``` 
 
 4. Set up database  
-`$RAILS_ENV=production rails db:setup`  
+```sh
+RAILS_ENV=production rails db:setup
+```
 
 5. Create secret key that is used to encript JWT  
-`$rails credential:edit` - this command will open text editor where you can edit auto-generated secret key if you like.  
+```sh
+rails credential:edit
+```
+:point_up: this command will open text editor where you can edit auto-generated secret key.  
 Just close editor when you are done.   
-  > [!TIP]  
-  > You can run `$rails secret` to generate a new safe key to use 
+> [!TIP]  
+> You can run `$rails secret` to generate a new safe key to use 
 
 6. Start web server  
-`$RAILS_ENV=production rails s`  
-  > [!NOTE]  
-  > To specify host and port use *-b* and *-p* options correspondingly. For example:  
-  > `$RAILS_ENV=production rails s -b 127.0.0.1 -p 3000`  
+```sh
+$RAILS_ENV=production rails s
+```
+> [!NOTE]  
+> To specify host and port use *-b* and *-p* options correspondingly. For example:  
+> `$RAILS_ENV=production rails s -b 127.0.0.1 -p 3000`  
 
 Now server is up and running.
 
