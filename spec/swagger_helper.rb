@@ -20,51 +20,52 @@ RSpec.configure do |config|
         title: 'API',
         version: '1'
       },
-      # basePath: '/api/v1',
       components: {
         schemas: {
           Game: {
             type: 'object',
             properties: {
-              id: { type: :integer, example: 982478387 },
-              current_turn: { type: :integer, example: 0 },
-              players_turn: { type: :integer, example: 1 },
-              game_state: { type: :string, example: "in_lobby" },
+              id: { type: :integer, example: 982478387, description: "Used for joinin the game." },
+              current_turn: { type: :integer, example: 0, description: "The current move in the order." },
+              players_turn: { type: :integer, example: 1, description: "An ordinal ID of the player in the array of players. (This is different than player's id field)." },
+              game_state: { type: :string, example: "in_lobby", description: "One of the three main game states: in_lobby, players_turn, game_ended." },
               winning_score: { anyOf: [
                 { type: :integer, example: 250 },
                 { type: :null },
-              ] },
-              winners: { type: :array, items: { type: :integer }},
-              field: { type: :array, items: { type: :string }},
+              ], description: "Score that is nessesary to get to win the game." },
+              winners: { type: :array, items: { type: :integer }, description: "Array of player's ordinal IDs who have met winning criteria." },
+              field: { type: :array, items: { type: :string }, description: "This is the game field where letters are supposed to go, consisting of 225 initially blank tiles." },
               letter_bag: { anyOf: [
-                { type: :array, items: { type: :string }},
+                { type: :array, items: { type: :string } },
                 { type: :null },
-              ] },
+              ], description: "Array of letters from which players draw their hands." },
               language: { anyOf: [
                 { type: :string},
                 { type: :null },
-              ] },
+              ], description: "Language of letters that players use to play." },
               hand_size: { anyOf: [
                 { type: :integer },
                 { type: :null },
-              ] },
+              ], description: "The number of letters each player draw." },
               players: {
                 type: :array,
-                items: { '$ref': '#/components/schemas/Player' }
+                items: { '$ref': '#/components/schemas/Player' },
+                description: "The array of players",
               }
             }
           },
           Player: {
             type: 'object',
             properties: {
-              id: { type: :integer, example: 12 },
-              nickname: { type: :string, example: 'Biba' },
-              score: { type: :integer, example: 0 },
-              active_player: { type: :boolean, example: true },
-              want_to_end: { type: :boolean, example: false },
+              id: { type: :integer, example: 12, description: "Unique player id. Don't have much use for now." },
+              nickname: { type: :string, example: 'Biba', description: "No uniqueness is required." },
+              score: { type: :integer, example: 0, description: "The personal score of the player." },
+              active_player: { type: :boolean, example: true, description: "The flag that signifies whether the player is in game or has left it." },
+              want_to_end: { type: :boolean, example: false, description: "The flag that signifies if the player wants to finish the game." },
               hand: { 
                 type: :array, 
-                items: { type: :string, example: ''}
+                items: { type: :string, example: ''},
+                description: "Letters that player are 'holding'.", 
               }
             }
           }
@@ -82,7 +83,7 @@ RSpec.configure do |config|
       paths: {},
       servers: [
         {
-          url: 'http://localhost:8081',
+          url: 'https://scrabbles.xyz',
           # variables: {
           #   defaultHost: {
           #     default: 'www.example.com'

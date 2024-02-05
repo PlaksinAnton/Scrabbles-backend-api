@@ -33,7 +33,7 @@ The project was launched to provide a better alternative in terms of vocabulary 
 Currently, the project has completed the active development stage, the core game mechanics are established, and it is in the process of refining the existing game mode. Also, there are plans to introduce new game modes and English language support in the future.
 
 #### Working app in production
-[The working application with front-end](http://localhost:8080/new_game) (comming soon).  
+[The working application with front-end](https://scrabbles.xyz).  
 The front-end was provided by [aka_dude](https://codeberg.org/aka_dude) and can be found [here](https://codeberg.org/aka_dude/scramble-frontend).  
 
 #### Used technologies
@@ -47,7 +47,7 @@ Scrabble is a word game where players use letter tiles to create words on a 15-b
 Here are the full rules upon which the app was created: [rules in English](/files/scrabble_rules.pdf),  [rules in Russian](/files/правила_эрудит.pdf).
 
 ## API Documentation
-Comming soon. For now you can see it if you run application locally. It will be by this url http://localhost:8081/api/docs/index.html
+[Check here](https://scrabbles.xyz/api/docs/index.html)
 
 ## Aplication overview
 Here I would like to share some important details about the application architecture. This section will be useful for frontend developers or anyone seeking a better understanding of the project.

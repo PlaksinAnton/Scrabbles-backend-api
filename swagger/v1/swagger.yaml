@@ -11,69 +11,90 @@ components:
         id:
           type: integer
           example: 982478387
+          description: Used for joinin the game.
         current_turn:
           type: integer
           example: 0
+          description: The current move in the order.
         players_turn:
           type: integer
           example: 1
+          description: An ordinal ID of the player in the array of players. (This
+            is different than player's id field).
         game_state:
           type: string
           example: in_lobby
+          description: 'One of the three main game states: in_lobby, players_turn,
+            game_ended.'
         winning_score:
           anyOf:
           - type: integer
             example: 250
           - type: 'null'
+          description: Score that is nessesary to get to win the game.
         winners:
           type: array
           items:
             type: integer
+          description: Array of player's ordinal IDs who have met winning criteria.
         field:
           type: array
           items:
             type: string
+          description: This is the game field where letters are supposed to go, consisting
+            of 225 initially blank tiles.
         letter_bag:
           anyOf:
           - type: array
             items:
               type: string
           - type: 'null'
+          description: Array of letters from which players draw their hands.
         language:
           anyOf:
           - type: string
           - type: 'null'
+          description: Language of letters that players use to play.
         hand_size:
           anyOf:
           - type: integer
           - type: 'null'
+          description: The number of letters each player draw.
         players:
           type: array
           items:
             "$ref": "#/components/schemas/Player"
+          description: The array of players
     Player:
       type: object
       properties:
         id:
           type: integer
           example: 12
+          description: Unique player id. Don't have much use for now.
         nickname:
           type: string
           example: Biba
+          description: No uniqueness is required.
         score:
           type: integer
           example: 0
+          description: The personal score of the player.
         active_player:
           type: boolean
           example: true
+          description: The flag that signifies whether the player is in game or has
+            left it.
         want_to_end:
           type: boolean
           example: false
+          description: The flag that signifies if the player wants to finish the game.
         hand:
           type: array
           items:
             type: string
             example: ''
+          description: Letters that player are 'holding'.
   securitySchemes:
     JWT:
       name: Authorization
@@ -118,7 +139,7 @@ paths:
       schema:
         type: string
     post:
-      summary: Connects player to the game.
+      summary: Connects a new player to the game lobby.
       tags:
       - Gameplay
       parameters: []
@@ -148,7 +169,8 @@ paths:
               - nickname
   "/api/v1/start_game":
     post:
-      summary: Fills all player's hands and starts the game with chosen settings.
+      summary: "Changes the game state, sets the winning score, fills up the letter
+        bag, \n    then player's hands and sets other initial fields."
       tags:
       - Gameplay
       security:
@@ -189,8 +211,8 @@ paths:
               - language
   "/api/v1/submit_turn":
     post:
-      summary: Validates turn, updates field, refills player's hand and count player's
-        score.
+      summary: "Validates submitted  data, updates the game field, refills the player's
+        hand, \n    and calculates the score. Passes the turn."
       tags:
       - Gameplay
       security:
@@ -246,7 +268,8 @@ paths:
               - hand
   "/api/v1/exchange":
     post:
-      summary: Returns deleted letters from hand to letter bag and drags new ones.
+      summary: "Returns letters for exchange to the letter bag and draws new ones
+        as replacement. \n    Passes the turn."
       tags:
       - Gameplay
       security:
@@ -315,9 +338,8 @@ paths:
                     "$ref": "#/components/schemas/Game"
   "/api/v1/leave_game":
     post:
-      summary: "Sets player's 'active_player' flag to false.\n    An inactive player
-        is considered to have left the game and skips his turns. \n    When there
-        are no active players, the game is deleted."
+      summary: "Sets player's 'active_player' flag to false. An inactive player skips
+        his turns. \n    When there are no active players, the game is deleted."
       tags:
       - Gameplay
       security:
@@ -339,7 +361,7 @@ paths:
                     example: Player left the game!
   "/api/v1/skip_turn":
     post:
-      summary: Allows player to skip his turn.
+      summary: Passes the turn.
       tags:
       - Optional
       security:
@@ -360,7 +382,7 @@ paths:
                     "$ref": "#/components/schemas/Game"
   "/api/v1/spelling_check":
     post:
-      summary: Check if the specified word is in the dictionary.
+      summary: Checks if the specified word is present in the dictionary.
       tags:
       - Optional
       parameters: []
@@ -387,7 +409,7 @@ paths:
               - word
   "/api/v1/show":
     get:
-      summary: Show game by token. Deprecated, use status instead.
+      summary: Deprecated, use status instead.
       tags:
       - Usefull
       security:
@@ -408,7 +430,7 @@ paths:
                     "$ref": "#/components/schemas/Game"
   "/api/v1/status":
     get:
-      summary: Show full current game state by token.
+      summary: Displays the full current game state.
       tags:
       - Usefull
       security:
@@ -429,7 +451,7 @@ paths:
                     "$ref": "#/components/schemas/Game"
   "/api/v1/quick_status":
     get:
-      summary: Show minimalistic game status by token.
+      summary: Displays the minimalistic game status.
       tags:
       - Usefull
       security:
@@ -473,4 +495,4 @@ paths:
                               type: boolean
                               example: false
 servers:
-- url: http://localhost:8081
+- url: https://scrabbles.xyz

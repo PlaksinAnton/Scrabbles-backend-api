@@ -41,7 +41,7 @@ RSpec.describe 'api/v1/games', type: :request do
 
   path '/api/v1/join_game/{game_id}' do
     parameter name: 'game_id', in: :path, type: :string, description: 'Game id'
-    post('Connects player to the game.') do
+    post('Connects a new player to the game lobby.') do
       tags 'Gameplay'
       consumes 'application/json'
       produces 'application/json'
@@ -68,7 +68,8 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/start_game' do
-    post('Fills all player\'s hands and starts the game with chosen settings.') do
+    post("Changes the game state, sets the winning score, fills up the letter bag, 
+    then player's hands and sets other initial fields.") do
       tags 'Gameplay'
       consumes 'application/json'
       produces 'application/json'
@@ -99,7 +100,8 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/submit_turn' do
-    post("Validates turn, updates field, refills player's hand and count player's score.") do
+    post("Validates submitted  data, updates the game field, refills the player's hand, 
+    and calculates the score. Passes the turn.") do
       tags 'Gameplay'
       consumes 'application/json'
       produces 'application/json'
@@ -126,7 +128,8 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/exchange' do
-    post('Returns deleted letters from hand to letter bag and drags new ones.') do
+    post("Returns letters for exchange to the letter bag and draws new ones as replacement. 
+    Passes the turn.") do
       tags 'Gameplay'
       consumes 'application/json'
       produces 'application/json'
@@ -169,8 +172,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/leave_game' do
-    post("Sets player's 'active_player' flag to false.
-    An inactive player is considered to have left the game and skips his turns. 
+    post("Sets player's 'active_player' flag to false. An inactive player skips his turns. 
     When there are no active players, the game is deleted.") do
       tags 'Gameplay'
       produces 'application/json'
@@ -187,7 +189,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/skip_turn' do
-    post('Allows player to skip his turn.') do
+    post('Passes the turn.') do
       tags 'Optional'
       produces 'application/json'
       security [ JWT: {} ]
@@ -203,7 +205,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/spelling_check' do
-    post('Check if the specified word is in the dictionary.') do
+    post('Checks if the specified word is present in the dictionary.') do
       tags 'Optional'
       consumes 'application/json'
       produces 'application/json'
@@ -226,7 +228,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/show' do
-    get('Show game by token. Deprecated, use status instead.') do
+    get('Deprecated, use status instead.') do
       tags 'Usefull'
       produces 'application/json'
       security [ JWT: {} ]
@@ -242,7 +244,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/status' do
-    get('Show full current game state by token.') do
+    get('Displays the full current game state.') do
       tags 'Usefull'
       produces 'application/json'
       security [ JWT: {} ]
@@ -258,7 +260,7 @@ RSpec.describe 'api/v1/games', type: :request do
   end
 
   path '/api/v1/quick_status' do
-    get('Show minimalistic game status by token.') do
+    get('Displays the minimalistic game status.') do
       tags 'Usefull'
       produces 'application/json'
       security [ JWT: {} ]
