@@ -133,23 +133,23 @@ And get in it.
 bundle install
 ``` 
 
-4. Set up database  
+4. Create secret key that is used to encript JWT  
 ```sh
-RAILS_ENV=production rails db:setup
-```
-
-5. Create secret key that is used to encript JWT  
-```sh
-rails credential:edit
+EDITOR=nano rails credentials:edit
 ```
 :point_up: this command will open text editor where you can edit auto-generated secret key.  
 Just close editor when you are done.   
 > [!TIP]  
 > You can run `$rails secret` to generate a new safe key to use 
 
+5. Set up database  
+```sh
+RAILS_ENV=production rails db:setup
+```
+
 6. Start web server  
 ```sh
-$RAILS_ENV=production rails s
+RAILS_ENV=production rails s
 ```
 > [!NOTE]  
 > To specify host and port use *-b* and *-p* options correspondingly. For example:  
