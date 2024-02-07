@@ -25,7 +25,7 @@ RSpec.configure do |config|
           Game: {
             type: 'object',
             properties: {
-              id: { type: :integer, example: 982478387, description: "Used for joinin the game." },
+              id: { type: :integer, example: 982478387, description: "Used for joinnin the game." },
               current_turn: { type: :integer, example: 0, description: "The current move in the order." },
               players_turn: { type: :integer, example: 1, description: "An ordinal ID of the player in the array of players. (This is different than player's id field)." },
               game_state: { type: :string, example: "in_lobby", description: "One of the three main game states: in_lobby, players_turn, game_ended." },

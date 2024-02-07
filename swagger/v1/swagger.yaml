@@ -11,7 +11,7 @@ components:
         id:
           type: integer
           example: 982478387
-          description: Used for joinin the game.
+          description: Used for joinnin the game.
         current_turn:
           type: integer
           example: 0
