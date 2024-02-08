@@ -323,8 +323,8 @@ class Game < ApplicationRecord
   end
 
   def submitting_players_turn?(current_player)
-    id = self.players[players_turn].id
-    raise "It is the other player's turn: #{id}!" unless current_player.id == id
+    current_player_id = self.players[players_turn].id
+    raise "It is the other player's turn: #{id}!" unless current_player.id == current_player_id
     true
   end
   

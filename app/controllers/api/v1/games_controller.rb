@@ -64,7 +64,10 @@ class Api::V1::GamesController < Api::V1::ApplicationController
     if game.no_active_players?
       game.destroy
       return render json: { success: "Last player left the game, game deleted!" }
-
+      
+    elsif game.players[game.players_turn].id == current_player.id ## if curren player's turn
+      game.skip_turn!(current_player)
+      game.end_game! if game.game_has_a_winner? && game.all_players_are_done?
     end
     render json: { success: "Player left the game!" }
   end
