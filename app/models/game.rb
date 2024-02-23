@@ -7,7 +7,7 @@ class Game < ApplicationRecord
   include AASM
   SETTINGS = YAML.load_file("#{Rails.root}/config/game_settings.yml").freeze
 
-  aasm column: :game_state do 
+  aasm column: :game_state do
     state :in_lobby, initial: true
     state :players_turn
     state :game_ended
@@ -93,7 +93,7 @@ class Game < ApplicationRecord
   private
   def create_player(nickname)
     raise 'Nickname should be in string format!' unless nickname.class == String
-    p = self.players.create(nickname: nickname, game_id: self.id)
+    p = self.players.create(nickname: nickname, game_id: self.id) ####
     self.created_player_id = p.id
   end
 
@@ -111,13 +111,13 @@ class Game < ApplicationRecord
 
     hand_size = config_params[:hand_size]
     if (not hand_size.nil?) && (hand_size.class != Integer || hand_size < 1 || hand_size > 25)
-      raise "Unsuitable hand size: #{hand_size}!" 
+      raise "Unsuitable hand size: #{hand_size}! It should be between 1 and 25." 
     end
     hand_size ||= SETTINGS.dig('language', lang, 'hand_size')
 
     winning_score = config_params[:winning_score] 
     if (not winning_score.nil?) && (winning_score.class != Integer || winning_score < 1 || winning_score > 400)
-      raise "Winning score is misspelled or to big: #{winning_score}!"
+      raise "Unsuitable winning score: #{winning_score}! It should be between 1 and 400."
     end
     winning_score ||= SETTINGS.dig('game_mode', 'score', 'winning_score')
     
@@ -202,11 +202,12 @@ class Game < ApplicationRecord
     @new_field = self.field
     submit_params[:positions].each_with_index do |position, id|
       raise "positions should be in integer format!" if position.class != Integer
+      raise "positions should be in range of 0 and 224!" if position < 0 || position > 224
       raise "This position is already occupied: #{position}" if @new_field[position].present?
       raise "letters should be in string format!" if submit_params[:letters][id].class != String
       @new_field[position] = submit_params[:letters][id]
     end
-    (submit_params[:hand] || []).each{ |letter| raise "Hand letters should be in string format!" if letter.class != String }
+    (submit_params[:hand] || []).each{ |letter| raise "hand should be in string format!" if letter.class != String }
 
     match_arrived_letters(submit_params[:hand] + submit_params[:letters])
 
@@ -324,7 +325,7 @@ class Game < ApplicationRecord
 
   def submitting_players_turn?(current_player)
     current_player_id = self.players[players_turn].id
-    raise "It is the other player's turn: #{id}!" unless current_player.id == current_player_id
+    raise "It is the other player's turn: #{players_turn}!" unless current_player.id == current_player_id
     true
   end
   

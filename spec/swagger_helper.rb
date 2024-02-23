@@ -40,7 +40,7 @@ RSpec.configure do |config|
                 { type: :null },
               ], description: "Array of letters from which players draw their hands." },
               language: { anyOf: [
-                { type: :string},
+                { type: :string },
                 { type: :null },
               ], description: "Language of letters that players use to play." },
               hand_size: { anyOf: [
@@ -54,6 +54,44 @@ RSpec.configure do |config|
               }
             }
           },
+          game_in_lobby: {
+            type: 'object',
+            properties: {
+              id: { type: :integer, example: 852914058 },
+              current_turn: { type: :integer, example: 0 },
+              players_turn: { type: :integer, example: 0 },
+              game_state: { type: :string, example: "in_lobby" },
+              winning_score: { type: :null },
+              winners: { type: :array, items: { type: :integer }, example: [] },
+              field: { type: :array, items: { type: :string }, example: ['','','','...'] },
+              letter_bag: { type: :null },
+              language: { type: :null },
+              hand_size: { type: :null },
+              players: {
+                type: :array,
+                items: { '$ref': '#/components/schemas/player_in_lobby' },
+              }
+            }
+          },
+          active_game: {
+            type: 'object',
+            properties: {
+              id: { type: :integer, example: 87537405 },
+              current_turn: { type: :integer, example: 1 },
+              players_turn: { type: :integer, example: 0 },
+              game_state: { type: :string, example: "players_turn" },
+              winning_score: { type: :integer, example: 150 },
+              winners: { type: :array, items: { type: :integer }, example: [] },
+              field: { type: :array, items: { type: :string }, example: ['','','','...'] },
+              letter_bag: { type: :array, items: { type: :string } },
+              language: { type: :string, example: 'rus' },
+              hand_size: { type: :integer, example: 7 },
+              players: {
+                type: :array,
+                items: { '$ref': '#/components/schemas/player_in_game' },
+              }
+            }
+          },
           Player: {
             type: 'object',
             properties: {
@@ -64,11 +102,42 @@ RSpec.configure do |config|
               want_to_end: { type: :boolean, example: false, description: "The flag that signifies if the player wants to finish the game." },
               hand: { 
                 type: :array, 
-                items: { type: :string, example: ''},
+                items: { type: :string },
+                example: ['а','в','р','н','о','е','*'],
                 description: "Letters that player are 'holding'.", 
               }
             }
-          }
+          },
+          player_in_lobby: {
+            type: 'object',
+            properties: {
+              id: { type: :integer, example: 12 },
+              nickname: { type: :string, example: 'Biba' },
+              score: { type: :integer, example: 0 },
+              active_player: { type: :boolean, example: true },
+              want_to_end: { type: :boolean, example: false },
+              hand: {
+                type: :array,
+                items: { type: :string},
+                example: [],
+              }
+            }
+          },
+          player_in_game: {
+            type: 'object',
+            properties: {
+              id: { type: :integer, example: 12 },
+              nickname: { type: :string, example: 'Biba' },
+              score: { type: :integer, example: 0 },
+              active_player: { type: :boolean, example: true },
+              want_to_end: { type: :boolean, example: false },
+              hand: {
+                type: :array,
+                items: { type: :string },
+                example: ['а', 'ь', 'о', 'с', 'т', 'к', 'е'],
+              }
+            }
+          },
         },
         securitySchemes: {
             JWT: {

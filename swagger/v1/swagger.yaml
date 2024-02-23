@@ -65,6 +65,93 @@ components:
           items:
             "$ref": "#/components/schemas/Player"
           description: The array of players
+    game_in_lobby:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 852914058
+        current_turn:
+          type: integer
+          example: 0
+        players_turn:
+          type: integer
+          example: 0
+        game_state:
+          type: string
+          example: in_lobby
+        winning_score:
+          type: 'null'
+        winners:
+          type: array
+          items:
+            type: integer
+          example: []
+        field:
+          type: array
+          items:
+            type: string
+          example:
+          - ''
+          - ''
+          - ''
+          - "..."
+        letter_bag:
+          type: 'null'
+        language:
+          type: 'null'
+        hand_size:
+          type: 'null'
+        players:
+          type: array
+          items:
+            "$ref": "#/components/schemas/player_in_lobby"
+    active_game:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 87537405
+        current_turn:
+          type: integer
+          example: 1
+        players_turn:
+          type: integer
+          example: 0
+        game_state:
+          type: string
+          example: players_turn
+        winning_score:
+          type: integer
+          example: 150
+        winners:
+          type: array
+          items:
+            type: integer
+          example: []
+        field:
+          type: array
+          items:
+            type: string
+          example:
+          - ''
+          - ''
+          - ''
+          - "..."
+        letter_bag:
+          type: array
+          items:
+            type: string
+        language:
+          type: string
+          example: rus
+        hand_size:
+          type: integer
+          example: 7
+        players:
+          type: array
+          items:
+            "$ref": "#/components/schemas/player_in_game"
     Player:
       type: object
       properties:
@@ -93,8 +180,68 @@ components:
           type: array
           items:
             type: string
-            example: ''
+          example:
+          - а
+          - в
+          - р
+          - н
+          - о
+          - е
+          - "*"
           description: Letters that player are 'holding'.
+    player_in_lobby:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        nickname:
+          type: string
+          example: Biba
+        score:
+          type: integer
+          example: 0
+        active_player:
+          type: boolean
+          example: true
+        want_to_end:
+          type: boolean
+          example: false
+        hand:
+          type: array
+          items:
+            type: string
+          example: []
+    player_in_game:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        nickname:
+          type: string
+          example: Biba
+        score:
+          type: integer
+          example: 0
+        active_player:
+          type: boolean
+          example: true
+        want_to_end:
+          type: boolean
+          example: false
+        hand:
+          type: array
+          items:
+            type: string
+          example:
+          - а
+          - ь
+          - о
+          - с
+          - т
+          - к
+          - е
   securitySchemes:
     JWT:
       name: Authorization
@@ -108,7 +255,7 @@ paths:
       parameters: []
       responses:
         '201':
-          description: successful
+          description: Game created
           headers:
             Token:
               type: string
@@ -118,7 +265,17 @@ paths:
               schema:
                 properties:
                   game:
-                    "$ref": "#/components/schemas/Game"
+                    "$ref": "#/components/schemas/game_in_lobby"
+        '400':
+          description: No nickname provided
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
       requestBody:
         content:
           application/json:
@@ -145,7 +302,7 @@ paths:
       parameters: []
       responses:
         '200':
-          description: successful
+          description: Player joined to the game
           headers:
             Token:
               type: string
@@ -155,7 +312,27 @@ paths:
               schema:
                 properties:
                   game:
-                    "$ref": "#/components/schemas/Game"
+                    "$ref": "#/components/schemas/game_in_lobby"
+        '400':
+          description: Too much players
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+        '405':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
       requestBody:
         content:
           application/json:
@@ -164,7 +341,7 @@ paths:
               properties:
                 nickname:
                   type: string
-                  example: Biba
+                  example: Boba
               required:
               - nickname
   "/api/v1/start_game":
@@ -182,13 +359,33 @@ paths:
           type: string
       responses:
         '200':
-          description: successful
+          description: All fields are specified
           content:
             application/json:
               schema:
                 properties:
                   game:
-                    "$ref": "#/components/schemas/Game"
+                    "$ref": "#/components/schemas/active_game"
+        '400':
+          description: Unsuitable winning score
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: int
+                required:
+                - error
+        '405':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
       requestBody:
         content:
           application/json:
@@ -198,15 +395,15 @@ paths:
                 language:
                   type: string
                   example: rus
-                  description: Only russian for now.
+                  description: Only russian is availible for now.
                 hand_size:
                   type: integer
                   example: '8'
-                  description: Default for russian is 7.
+                  description: Default value for russian is 7.
                 winning_score:
                   type: integer
                   example: '120'
-                  description: Default is 150.
+                  description: Default value is 150.
               required:
               - language
   "/api/v1/submit_turn":
@@ -224,13 +421,33 @@ paths:
           type: string
       responses:
         '200':
-          description: successful
+          description: Word is attached to existing one
           content:
             application/json:
               schema:
                 properties:
                   game:
-                    "$ref": "#/components/schemas/Game"
+                    "$ref": "#/components/schemas/active_game"
+        '400':
+          description: Submitted word doesn't exist
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: int
+                required:
+                - error
+        '405':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
       requestBody:
         content:
           application/json:
@@ -268,8 +485,9 @@ paths:
               - hand
   "/api/v1/exchange":
     post:
-      summary: "Returns letters for exchange to the letter bag and draws new ones
-        as replacement. \n    Passes the turn."
+      summary: |-
+        Returns letters for exchange to the letter bag and draws new ones as replacement.
+            Passes the turn.
       tags:
       - Gameplay
       security:
@@ -281,13 +499,23 @@ paths:
           type: string
       responses:
         '200':
-          description: successful
+          description: Sucsessfull exchange
           content:
             application/json:
               schema:
                 properties:
                   game:
-                    "$ref": "#/components/schemas/Game"
+                    "$ref": "#/components/schemas/active_game"
+        '405':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
       requestBody:
         content:
           application/json:

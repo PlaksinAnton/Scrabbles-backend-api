@@ -33,7 +33,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_28_161458) do
     t.boolean "want_to_end", null: false
     t.string "hand", null: false
     t.integer "game_id", null: false
-    t.datetime "created_at", null: false
+    t.datetime "created_at", null: false  
     t.datetime "updated_at", null: false
     t.index ["game_id"], name: "index_players_on_game_id"
   end

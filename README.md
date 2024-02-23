@@ -37,6 +37,7 @@ The front-end was provided by [aka_dude](https://codeberg.org/aka_dude) and can 
 - [JWT](https://jwt.io/introduction)
 - [State machines](https://github.com/aasm/aasm)
 - [Open API](https://swagger.io/specification/)
+- Request testing ([rspec-rails](https://github.com/rspec/rspec-rails?tab=readme-ov-file) + [FactoryBot](https://github.com/thoughtbot/factory_bot_rails?tab=readme-ov-file))
 
 #### If you've never heard of Scrabble
 Scrabble is a word game where players use letter tiles to create words on a 15-by-15 game board. The game involves both vocabulary and strategy, as players compete to maximize their points while adhering to specific placement rules.  
